@@ -1,1 +1,4 @@
 .DS_Store
+.eggs
+*.pyc
+damage.egg-info
