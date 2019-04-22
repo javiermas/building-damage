@@ -1,3 +1,5 @@
 tensorflow==1.13.1
 numpy==1.16.2
 geopandas==0.4.1
+rasterio==1.0.22
+pandas==0.24.1
