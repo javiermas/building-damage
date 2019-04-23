@@ -27,7 +27,7 @@ class ImageClassificationNetwork:
                 epoch_loss.append(round(loss, 2))
                 epoch_probabilities.extend(probabilities)
                 data_stream.update()
-                print(f'batch {batch} loss {epoch_loss[-1]:.2f}')
+                print(f'batch {batch} loss {epoch_loss[-1]}')
 
             global_loss.extend(epoch_loss)
             global_probabilities.append(epoch_probabilities)
