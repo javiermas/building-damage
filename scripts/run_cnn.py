@@ -1,3 +1,4 @@
+import os
 import geopandas as gpd
 import rasterio
 import numpy as np
@@ -42,8 +43,8 @@ def get_building_frame(city_array, row, col, extra_pixels):
     return city_array[(row-extra_pixels):(row+extra_pixels), (col-extra_pixels):(col+extra_pixels), :]
 
 
-file_name_annotation = 'data/Damage_Sites_Damascus_2017_Ex_Update.shp'
-file_name_city = 'data/damascus_2017_01_22_zoom_19.tif'
+file_name_annotation = 'data/annotations/Damage_Sites_Damascus_2017_Ex_Update.shp'
+file_name_city = 'data/city_rasters/damascus_2017_01_22_zoom_19.tif'
 annotation_data = gpd.read_file(file_name_annotation)
 annotation_data = preprocess_damage_data(annotation_data)
 damascus_raster = rasterio.open(file_name_city)
@@ -70,6 +71,9 @@ train_config = {
     'epochs': 3,
     'batch_size': 100,
 }
+os.environ['CUDA_VISIBLE_DEVICES'] = '1'
+import tensorflow as tf
+tf.logging.set_verbosity(tf.logging.INFO)
 classification_network = ImageClassificationNetwork(**network_config)
 classification_network.fit(np.stack(feature_matrix['image'].values), feature_matrix['target'].values,
                            **train_config)
