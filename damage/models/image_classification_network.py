@@ -27,11 +27,11 @@ class ImageClassificationNetwork:
                 epoch_loss.append(round(loss, 2))
                 epoch_probabilities.extend(probabilities)
                 data_stream.update()
-                print(f'batch {batch} loss {epoch_loss[-1]}')
+                print('batch {} loss {}'.format(batch, epoch_loss[-1]))
 
             global_loss.extend(epoch_loss)
             global_probabilities.append(epoch_probabilities)
-            print(f'--- epoch {epoch} loss {np.mean(epoch_loss):.2f} --- ')
+            print('--- epoch {} loss {} --- '.format(epoch, np.mean(epoch_loss)))
 
         self.global_loss = global_loss
         self.global_probabilities = global_probabilities
@@ -44,4 +44,4 @@ class ImageClassificationNetwork:
     def _check_graph_validity(graph):
         for attribute in ['x', 'y', 'train_operation', 'probabilities', 'loss']:
             if not (hasattr(graph, attribute)):
-                raise AttributeError(f'Graph missing attribute {attribute}')
+                raise AttributeError('Graph missing attribute {}'.format(attribute))
