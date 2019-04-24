@@ -1,5 +1,5 @@
 import tensorflow as tf
-from tensorflow.layers import conv2d, max_pooling2d, dense, Flatten
+from keras.layers import Conv2D, MaxPooling2D, Dense, Flatten
 
 from damage.models.network_graph import ImageClassificationGraph
 
@@ -20,14 +20,14 @@ class CNNGraph(ImageClassificationGraph):
                 layers.append(self._create_convolutional_and_pooling_layer(inputs=layers[-1], **config))
 
         layer_flat = self._flatten_layer(layers[-1])
-        logits = tf.layers.dense(inputs=layer_flat, units=self.num_classes, activation=tf.nn.relu)
+        logits = Dense(inputs=layer_flat, units=self.num_classes, activation=tf.nn.relu)
         self.logits = logits
 
     @staticmethod
     def _create_convolutional_and_pooling_layer(inputs, filters, kernel_size, pool_size):
-        conv = conv2d(inputs=inputs, filters=filters, kernel_size=kernel_size,
+        conv = Conv2D(inputs=inputs, filters=filters, kernel_size=kernel_size,
                       padding="same", activation=tf.nn.relu)
-        pool = tf.layers.max_pooling2d(inputs=conv, pool_size=pool_size, strides=pool_size[0])
+        pool = tf.layers.MaxPooling2D(inputs=conv, pool_size=pool_size, strides=pool_size[0])
         return pool
 
     @staticmethod
