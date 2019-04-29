@@ -3,7 +3,8 @@ import geopandas as gpd
 import rasterio
 import numpy as np
 import pandas as pd
-from damage.models import CNNGraph, ImageClassificationNetwork
+from damage.data import DataStream
+from damage.models import CNN
 
 
 def preprocess_damage_data(damage_data):
@@ -40,8 +41,7 @@ def create_feature_matrix(city_array, annotation_data, window=50):
     return pd.DataFrame(feature_data)
 
 def get_building_frame(city_array, row, col, extra_pixels):
-    return city_array[(row-extra_pixels):(row+extra_pixels), (col-extra_pixels):(col+extra_pixels), :]
-
+    return city_array[(row-extra_pixels):(row+extra_pixels), (col-extra_pixels):(col+extra_pixels), :].astype(float)
 
 file_name_annotation = 'data/annotations/Damage_Sites_Damascus_2017_Ex_Update.shp'
 file_name_city = 'data/city_rasters/damascus_2017_01_22_zoom_19.tif'
@@ -51,29 +51,25 @@ damascus_raster = rasterio.open(file_name_city)
 damascus_array = raster_to_array(damascus_raster)
 image_index = get_image_index_from_annotation(annotation_data, damascus_raster)
 annotation_data = pd.merge(annotation_data, image_index, left_index=True, right_index=True)
-annotation_data = crop_annotation_to_image_dimensions(annotation_data, {'height': damascus_raster.height, 'width': damascus_raster.width})
+annotation_data = crop_annotation_to_image_dimensions(annotation_data,
+        {'height': damascus_raster.height, 'width': damascus_raster.width})
 
 window = 50
-feature_matrix = create_feature_matrix(damascus_array, annotation_data, window).iloc[:500]
+feature_matrix = create_feature_matrix(damascus_array, annotation_data, window)
 
+os.environ['CUDA_VISIBLE_DEVICES'] = '1'
 graph_config = {
     'num_classes': 2,
     'convolutional_layers': [{'filters': 64, 'kernel_size': [5, 5], 'pool_size': [2, 2]} for _ in range(2)],
-    'image_shape': [window, window, 3],
     'weight_positives': 1 - feature_matrix['target'].mean(),
     'learning_rate': 0.1,
 }
-graph = CNNGraph(**graph_config)
-network_config = {
-    'graph': graph,
-}
+cnn = CNN(**graph_config)
+batch_size = 100
+data_stream = DataStream(np.stack(feature_matrix['image'].values), feature_matrix['target'].values, batch_size)
+data_generator = data_stream.get_generator()
 train_config = {
     'epochs': 3,
-    'batch_size': 100,
+    'steps_per_epoch': data_stream.num_batches,
 }
-os.environ['CUDA_VISIBLE_DEVICES'] = '1'
-import tensorflow as tf
-tf.logging.set_verbosity(tf.logging.INFO)
-classification_network = ImageClassificationNetwork(**network_config)
-classification_network.fit(np.stack(feature_matrix['image'].values), feature_matrix['target'].values,
-                           **train_config)
+cnn.fit_generator(data_generator, **train_config)
