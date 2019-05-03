@@ -3,8 +3,9 @@ import geopandas as gpd
 import rasterio
 import numpy as np
 import pandas as pd
+
 from damage.data import DataStream
-from damage.models import CNN
+from damage.models import CNN, RandomSearch
 
 
 def preprocess_damage_data(damage_data):
@@ -15,8 +16,10 @@ def preprocess_damage_data(damage_data):
     return damage_data
 
 def get_image_index_from_annotation(annotation_data, city_data):
-    return annotation_data.apply(lambda x: pd.Series({key: i for key, i in zip(['row', 'col'], city_data.index(x['longitude'], x['latitude']))}), axis=1)
-    
+    return annotation_data.apply(lambda x:
+        pd.Series({key: i for key, i in zip(['row', 'col'], city_data.index(x['longitude'], x['latitude']))}),
+        axis=1)
+
 def crop_annotation_to_image_dimensions(annotation_data, dimensions):
     mask = (annotation_data['row'] < dimensions['height'])\
         & (annotation_data['row'] >= 0)\
@@ -51,25 +54,25 @@ damascus_raster = rasterio.open(file_name_city)
 damascus_array = raster_to_array(damascus_raster)
 image_index = get_image_index_from_annotation(annotation_data, damascus_raster)
 annotation_data = pd.merge(annotation_data, image_index, left_index=True, right_index=True)
-annotation_data = crop_annotation_to_image_dimensions(annotation_data,
-        {'height': damascus_raster.height, 'width': damascus_raster.width})
+annotation_data = crop_annotation_to_image_dimensions(
+    annotation_data, {'height': damascus_raster.height, 'width': damascus_raster.width})
 
 window = 50
 feature_matrix = create_feature_matrix(damascus_array, annotation_data, window)
-
+random_search = RandomSearch()
 os.environ['CUDA_VISIBLE_DEVICES'] = '1'
-graph_config = {
-    'num_classes': 2,
-    'convolutional_layers': [{'filters': 64, 'kernel_size': [5, 5], 'pool_size': [2, 2]} for _ in range(2)],
-    'weight_positives': 1 - feature_matrix['target'].mean(),
-    'learning_rate': 0.1,
-}
-cnn = CNN(**graph_config)
-batch_size = 100
-data_stream = DataStream(np.stack(feature_matrix['image'].values), feature_matrix['target'].values, batch_size)
-data_generator = data_stream.get_generator()
-train_config = {
-    'epochs': 3,
-    'steps_per_epoch': data_stream.num_batches,
-}
-cnn.fit_generator(data_generator, **train_config)
+Model = CNN
+spaces = random_search.sample_cnn(1)
+for space in spaces:
+    cnn = Model(**space)
+    data_stream = DataStream(np.stack(feature_matrix['image'].values),
+                             feature_matrix['target'].values,
+                             space['batch_size'])
+    train_generator, test_generator = data_stream.get_generators()
+    losses = cnn.validate_generator(train_generator, test_generator,
+                                    steps_per_epoch=data_stream.num_batches,
+                                    validation_steps=1,
+                                    **space)
+    losses['model'] = Model.__class__.__name__
+    losses['space'] = space
+    losses['window'] = window
