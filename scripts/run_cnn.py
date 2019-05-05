@@ -4,8 +4,9 @@ import rasterio
 import numpy as np
 import pandas as pd
 
-from damage.data import DataStream
+from damage.data import DataStream, Raster
 from damage.models import CNN, RandomSearch
+from damage import features
 
 
 def preprocess_damage_data(damage_data):
@@ -46,19 +47,48 @@ def create_feature_matrix(city_array, annotation_data, window=50):
 def get_building_frame(city_array, row, col, extra_pixels):
     return city_array[(row-extra_pixels):(row+extra_pixels), (col-extra_pixels):(col+extra_pixels), :].astype(float)
 
-file_name_annotation = 'data/annotations/Damage_Sites_Damascus_2017_Ex_Update.shp'
-file_name_city = 'data/city_rasters/damascus_2017_01_22_zoom_19.tif'
-annotation_data = gpd.read_file(file_name_annotation)
-annotation_data = preprocess_damage_data(annotation_data)
-damascus_raster = rasterio.open(file_name_city)
-damascus_array = raster_to_array(damascus_raster)
-image_index = get_image_index_from_annotation(annotation_data, damascus_raster)
-annotation_data = pd.merge(annotation_data, image_index, left_index=True, right_index=True)
-annotation_data = crop_annotation_to_image_dimensions(
-    annotation_data, {'height': damascus_raster.height, 'width': damascus_raster.width})
+def read_annotations(file_names):
+    path = 'data/annotations/'
+    data = {}
+    for file_name in file_names:
+        data['annotation_'+file_name] = gpd.read_file(path+file_name)
 
-window = 50
-feature_matrix = create_feature_matrix(damascus_array, annotation_data, window)
+    return data
+
+def read_rasters(file_names):
+    path = 'data/city_rasters/'
+    data = {}
+    for file_name in file_names:
+        data['raster_'+file_name] = Raster(path=path+file_name)
+
+    return data
+## Reading
+annotation_data = read_annotations(file_names=[
+    '6_Damage_Sites_Aleppo_SDA.shp',
+])
+raster_data = read_rasters(file_names=[
+    'aleppo_2011_06_26_zoom_19.tif',
+    'aleppo_2016_10_19_zoom_19.tif',
+])
+data = {**annotation_data, **raster_data}
+### Processing
+grid_size = 0.035
+tile_size = 64
+stride = 16
+pipeline = features.Pipeline(
+    preprocessors=[
+        features.AnnotationPreprocessor(grid_size=grid_size),
+    ],
+    features=[
+        features.RasterSplitter(tile_size=tile_size, stride=stride),
+        features.RasterPairMaker(),
+    ],
+
+)
+features = pipeline.transform(data)
+
+import ipdb; ipdb.set_trace()
+#### Modelling
 random_search = RandomSearch()
 os.environ['CUDA_VISIBLE_DEVICES'] = '1'
 Model = CNN
