@@ -4,4 +4,4 @@
 *.swp
 *.xml
 damage.egg-info
-notebooks/.ipynb_checkpoints/
+.ipynb_checkpoints
