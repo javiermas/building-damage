@@ -1,4 +1,7 @@
-class Pipeline:
+from damage.features.base import Transformer
+
+
+class Pipeline(Transformer):
 
     def __init__(self, features, preprocessors):
         self.features = features
