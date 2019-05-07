@@ -2,9 +2,11 @@ from datetime import date
 import pandas as pd
 from tqdm import tqdm
 
-from damage.utils import update_progress, geo_location_index
+from damage.utils import geo_location_index
+from damage.features.base import Feature
 
-class RasterSplitter:
+
+class RasterSplitter(Feature):
 
     def __init__(self, tile_size, stride, grid_size=0.035):
         self.tile_size = tile_size
@@ -33,6 +35,8 @@ class RasterSplitter:
                         'date': date(year=year, month=month, day=day),
                     }
                     tiles.append(tile)
+    
+            data.pop(name) # Hack to avoid memory problems
 
         tiles = pd.DataFrame(tiles)
         tiles['location_index'] = geo_location_index(tiles['longitude'], tiles['latitude'],

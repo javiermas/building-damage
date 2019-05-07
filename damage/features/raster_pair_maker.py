@@ -1,8 +1,10 @@
 import pandas as pd
 from numpy import concatenate
 
+from damage.features.base import Feature
 
-class RasterPairMaker:
+
+class RasterPairMaker(Feature):
 
     """ This class makes pairs of rasters in different points in time
     by concatenating the first raster to every posterior one in each city
@@ -11,6 +13,7 @@ class RasterPairMaker:
 
     def transform(self, data):
         raster_pairs = self._make_raster_pairs_all_cities(data['RasterSplitter'])
+        data.pop('RasterSplitter') # Hack to avoid memory problems
         return raster_pairs
 
     def _make_raster_pairs_all_cities(self, raster_data):
