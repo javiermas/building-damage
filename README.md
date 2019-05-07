@@ -13,10 +13,6 @@ __Rasters__
 
 -- 17/01/2013 ---------- 21/03/2014 --- 02/02/2015 --- 01/07/2016
 
-__Problems with data__
-
-- Latitude remains fixed at 35.0 in all rasters.
-
 
 ### Daraa
 
@@ -28,5 +24,7 @@ __Rasters__
 
 -- 17/10/2011 -- 10/11/2013 ---- 01/05/2014 --------- 25/02/2016 -- 19/04/2016 - 07/02/2017
 
-__Problems with data__
-- daraa_2016_04_19 latitude and longitude remain fixed at 36.0 and 32.0
+__The coordinates problem__
+Some .tiff files seem to have either the latitude or longitude constant across the entire image. This renders them useless because we can't link them to the annotation, where the damage levels are associated to a specific coordinate. See the following notebook for the corresponding analysis:
+
+https://github.com/javiermas/building-damage/blob/master/notebooks/jma_02_coordinate_problems.ipynb
