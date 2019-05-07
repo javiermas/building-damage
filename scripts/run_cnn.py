@@ -32,11 +32,13 @@ def read_rasters(file_names):
     return data
 ## Reading
 annotation_data = read_annotations(file_names=[
-    '4_Damage_Sites_Raqqa_CDA.shp',
+    '4_Damage_Sites_Daraa_CDA.shp',
 ])
 raster_data = read_rasters(file_names=[
-    'homs_2011_05_21_zoom_19.tif',
-    'homs_2016_05_30_zoom_19.tif',
+    'daraa_2011_10_17_zoom_19.tif',
+    'daraa_2016_04_19_zoom_19.tif',
+    #'homs_2011_05_21_zoom_19.tif',
+    #'homs_2016_05_30_zoom_19.tif',
     #'raqqa_2013_01_17_zoom_19.tif',
     #'raqqa_2016_07_01_zoom_19.tif',
     #'aleppo_2011_06_26_zoom_19.tif',
