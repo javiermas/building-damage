@@ -27,3 +27,6 @@ __Annotations__
 __Rasters__
 
 -- 17/10/2011 -- 10/11/2013 ---- 01/05/2014 --------- 25/02/2016 -- 19/04/2016 - 07/02/2017
+
+__Problems with data__
+- daraa_2016_04_19 latitude and longitude remain fixed at 36.0 and 32.0
