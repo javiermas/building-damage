@@ -15,6 +15,7 @@ def crop_annotation_to_image_dimensions(annotation_data, dimensions):
         & (annotation_data['col'] >= 0)
     return annotation_data.loc[mask]
 
+
 def read_annotations(file_names):
     path = 'data/annotations/'
     data = {}
@@ -23,6 +24,7 @@ def read_annotations(file_names):
 
     return data
 
+
 def read_rasters(file_names):
     path = 'data/city_rasters/'
     data = {}
@@ -30,13 +32,34 @@ def read_rasters(file_names):
         data['raster_'+file_name] = Raster(path=path+file_name)
 
     return data
+
+
+def read_populated_areas(file_names):
+    path = 'data/polygons/'
+    data = {}
+    for file_name in file_names:
+        populated_area = gpd.read_file(path+file_name)
+        populated_area['NAME_EN'] = populated_area['NAME_EN'].str.lower()
+        data['populated_areas_'+file_name] = populated_area
+
+    return data
+
+def read_no_analysis_areas(file_names):
+    path = 'data/polygons/'
+    data = {}
+    for file_name in file_names:
+        data['no_analysis_areas_'+file_name] = gpd.read_file(path+file_name)
+
+    return data
+
 ## Reading
+city = 'Daraa'
 annotation_data = read_annotations(file_names=[
-    '4_Damage_Sites_Daraa_CDA.shp',
+    f'4_Damage_Sites_{city}_CDA.shp',
 ])
 raster_data = read_rasters(file_names=[
     'daraa_2011_10_17_zoom_19.tif',
-    'daraa_2016_04_19_zoom_19.tif',
+    'daraa_2017_02_07_zoom_19.tif',
     #'homs_2011_05_21_zoom_19.tif',
     #'homs_2016_05_30_zoom_19.tif',
     #'raqqa_2013_01_17_zoom_19.tif',
@@ -44,11 +67,19 @@ raster_data = read_rasters(file_names=[
     #'aleppo_2011_06_26_zoom_19.tif',
     #'aleppo_2016_10_19_zoom_19.tif',
 ])
-data = {**annotation_data, **raster_data}
+populated_areas = read_populated_areas(file_names=[
+    'populated_areas.shp',
+])
+
+no_analysis_area = read_no_analysis_areas(file_names=[
+    f'5_No_Analysis_Areas_{city}.shp',
+])
+
+data = {**annotation_data, **raster_data, **populated_areas, **no_analysis_area}
 ### Processing
 grid_size = 0.035
-tile_size = 64
-stride = 16
+tile_size = 64 * 4
+stride = tile_size#16
 pipeline = features.Pipeline(
     preprocessors=[
         features.AnnotationPreprocessor(grid_size=grid_size),
@@ -56,6 +87,7 @@ pipeline = features.Pipeline(
     features=[
         features.RasterSplitter(tile_size=tile_size, stride=stride),
         features.RasterPairMaker(),
+        features.AnnotationMaker(),
     ],
 
 )
