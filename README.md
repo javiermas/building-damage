@@ -5,12 +5,12 @@ Repository containing code for infering building damage from satellite imaging
 
 To get started write the following commands in your terminal:
 
-'''
+```
 git clone git@github.com:javiermas/building-damage.git
 cd building-damage
 pip install -r requirements.txt
 pip install -e .
-'''
+```
 
 ## Data
 ### Raqqa
