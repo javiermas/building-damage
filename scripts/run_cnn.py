@@ -1,7 +1,10 @@
 import os
+import json
 import geopandas as gpd
 import numpy as np
 import pandas as pd
+from math import ceil
+from time import time
 
 from damage.data import DataStream, Raster
 from damage.models import CNN, RandomSearch
@@ -45,6 +48,7 @@ def read_no_analysis_areas(file_names):
 RASTERS_PATH = 'data/city_rasters'
 ANNOTATIONS_PATH = 'data/annotations'
 POLYGONS_PATH = 'data/polygons'
+RESULTS_PATH = 'logs/experiments'
 
 city = 'Daraa'
 annotation_files = [
@@ -75,14 +79,14 @@ no_analysis_area = read_no_analysis_areas(file_names=[
 data = {**annotation_data, **raster_data, **populated_areas, **no_analysis_area}
 ### Processing
 grid_size = 0.035
-tile_size = 64*5
-stride = tile_size#16
+patch_size = 64
+stride = patch_size#16
 pipeline = features.Pipeline(
     preprocessors=[
         ('AnnotationPreprocessor', features.AnnotationPreprocessor(grid_size=grid_size)),
     ],
     features=[
-        ('RasterSplitter', features.RasterSplitter(tile_size=tile_size, stride=stride, grid_size=grid_size)),
+        ('RasterSplitter', features.RasterSplitter(patch_size=patch_size, stride=stride, grid_size=grid_size)),
         ('AnnotationMaker', features.AnnotationMaker()),
         ('RasterPairMaker', features.RasterPairMaker()),
     ],
@@ -90,20 +94,28 @@ pipeline = features.Pipeline(
 )
 features = pipeline.transform(data)
 
-import ipdb; ipdb.set_trace()
 #### Modelling
 random_search = RandomSearch()
 os.environ['CUDA_VISIBLE_DEVICES'] = '5'
 Model = CNN
-spaces = random_search.sample_cnn(1)
+spaces = random_search.sample_cnn(10)
 for space in spaces:
     cnn = Model(**space)
     data_stream = DataStream(batch_size=space['batch_size'], test_proportion=0.8)
-    train_generator, test_generator = data_stream.split(features['image'], features['destroyed'])
+    num_batches = ceil(len(features) / space['batch_size'])
+    train_generator, test_generator = data_stream.split(np.stack(features['image'].values),
+                                                        features['destroyed'].values)
+    #try:
     losses = cnn.validate_generator(train_generator, test_generator,
-                                    steps_per_epoch=data_stream.num_batches,
+                                    steps_per_epoch=num_batches,
                                     validation_steps=1,
                                     **space)
+    '''
+    except ValueError:
+        losses = {} # In case of erroneous architecture
+    '''
     losses['model'] = Model.__class__.__name__
     losses['space'] = space
-    losses['window'] = window
+    losses['patch_size'] = patch_size
+    with open('{}/experiment_{}.json'.format(RESULTS_PATH, round(time())), 'w') as f:
+        json.dump(losses, f)
