@@ -10,9 +10,9 @@ from damage.features.base import Feature
 
 class RasterSplitter(Feature):
 
-    def __init__(self, tile_size, stride, grid_size=0.035):
+    def __init__(self, patch_size, stride, grid_size=0.035):
         super().__init__()
-        self.tile_size = tile_size
+        self.patch_size = patch_size
         self.stride = stride
         self.grid_size = grid_size
 
@@ -39,8 +39,8 @@ class RasterSplitter(Feature):
             populated_areas_city = populated_areas.loc[populated_areas['NAME_EN'] == city, 'geometry'].tolist()
             assert len(populated_areas_city) > 0
             populated_areas_polygon = MultiPolygon(populated_areas_city)
-            for w in tqdm(range(self.tile_size//2, (raster.width - self.tile_size//2), self.stride)):
-                for h in range(self.tile_size//2, (raster.height - self.tile_size//2), self.stride):
+            for w in tqdm(range(self.patch_size//2, (raster.width - self.patch_size//2), self.stride)):
+                for h in range(self.patch_size//2, (raster.height - self.patch_size//2), self.stride):
                     longitude, latitude = raster.raster.xy(h, w)
                     point_is_valid = self._is_point_valid(Point(longitude, latitude),
                                                           populated_areas_polygon, no_analysis_areas)
@@ -75,10 +75,10 @@ class RasterSplitter(Feature):
             return True
 
     def _get_tile_boundaries(self, w, h):
-        left = (w - self.tile_size//2)
-        right = (w + self.tile_size//2)
-        top = (h - self.tile_size//2)
-        bottom = (h + self.tile_size//2)
+        left = (w - self.patch_size//2)
+        right = (w + self.patch_size//2)
+        top = (h - self.patch_size//2)
+        bottom = (h + self.patch_size//2)
         return left, right, top, bottom
 
     @staticmethod
