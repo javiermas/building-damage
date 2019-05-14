@@ -4,16 +4,13 @@ import numpy as np
 
 class RandomSearch:
 
-    def __init__(self):
-        pass
-
     def sample_cnn(self, T):
         spaces = [self._sample_single_cnn_space() for _ in range(T)]
         return spaces
-    
+
     @staticmethod
-    def _sample_single_cnn_space():    
-        num_layers = random.choice(range(1, 20))
+    def _sample_single_cnn_space():
+        num_layers = random.choice(range(1, 5))
         convolutional_layers = []
         for _ in range(num_layers):
             kernel_size = random.choice(range(1, 15))
@@ -24,7 +21,7 @@ class RandomSearch:
                 'filters': random.choice(range(10, 300)),
             }
             convolutional_layers.append(layer)
-        
+
         space = {
             'learning_rate': random.choice(np.geomspace(1e-2, 1)),
             'batch_size': random.choice(range(5, 200)),
@@ -32,4 +29,3 @@ class RandomSearch:
             'epochs': random.choice(range(20, 200)),
         }
         return space
-
