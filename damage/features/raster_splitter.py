@@ -1,6 +1,8 @@
-from datetime import date
+from datetime import date, timedelta
 import pandas as pd
+import numpy as np
 from tqdm import tqdm
+from shapely.geometry import MultiPolygon, Point
 
 from damage.utils import geo_location_index
 from damage.features.base import Feature
@@ -9,41 +11,78 @@ from damage.features.base import Feature
 class RasterSplitter(Feature):
 
     def __init__(self, tile_size, stride, grid_size=0.035):
+        super().__init__()
         self.tile_size = tile_size
         self.stride = stride
         self.grid_size = grid_size
 
     def transform(self, data):
+        raster_data = self._split_raster_data(data)
+        annotation_data = {name: _data for name, _data in data.items() if 'annotation' in name}
+        raster_data = self._assign_closest_previous_annotation_to_raster(annotation_data, raster_data)
+        raster_data = raster_data.rename(columns={'date': 'raster_date', 'closest_previous_annotation': 'date'})
+        raster_data['location_index'] = geo_location_index(raster_data['latitude'], raster_data['longitude'],
+                                                           grid_size=self.grid_size)
+        return raster_data.set_index(['city', 'patch_id', 'date'])
+
+    def _split_raster_data(self, data):
         rasters = [(key, value) for key, value in data.items() if 'raster' in key]
+        no_analysis_key = [key for key in data.keys() if 'no_analysis' in key][0]
+        populated_areas_key = [key for key in data.keys() if 'populated' in key][0]
+        populated_areas = data[populated_areas_key] #Hack: assumes one
+        no_analysis_areas = data[no_analysis_key]
+        no_analysis_areas = MultiPolygon(no_analysis_areas['geometry'].tolist()).buffer(0) #Hack: assumes one
         tiles = []
         for name, raster in rasters:
             array = raster.to_array().astype(float)
-            city, year, month, day = self.parse_filename(name)
-            number_of_iterations = len(range(self.tile_size//2, (raster.width-self.tile_size//2), self.stride))
+            city, year, month, day = self.parse_raster_filename(name)
+            populated_areas_city = populated_areas.loc[populated_areas['NAME_EN'] == city, 'geometry'].tolist()
+            assert len(populated_areas_city) > 0
+            populated_areas_polygon = MultiPolygon(populated_areas_city)
             for w in tqdm(range(self.tile_size//2, (raster.width - self.tile_size//2), self.stride)):
                 for h in range(self.tile_size//2, (raster.height - self.tile_size//2), self.stride):
                     longitude, latitude = raster.raster.xy(h, w)
-                    left = (w - self.tile_size//2)
-                    right = (w + self.tile_size//2 + 1)
-                    top = (h - self.tile_size//2)
-                    bottom = (h + self.tile_size//2 + 1)
+                    point_is_valid = self._is_point_valid(Point(longitude, latitude),
+                                                          populated_areas_polygon, no_analysis_areas)
+                    if not point_is_valid:
+                        continue
+
+                    left, right, top, bottom = self._get_tile_boundaries(w, h)
                     tile = {
                         'image': array[top:bottom, left:right],
                         'longitude': longitude,
                         'latitude': latitude,
                         'city': city,
                         'date': date(year=year, month=month, day=day),
+                        'patch_id': '{}-{}'.format(w, h),
                     }
                     tiles.append(tile)
-    
+
             data.pop(name) # Hack to avoid memory problems
 
         tiles = pd.DataFrame(tiles)
-        tiles['location_index'] = geo_location_index(tiles['longitude'], tiles['latitude'],
-                                                     grid_size=self.grid_size) 
         return tiles
 
-    def parse_filename(self, filename):
+    @staticmethod
+    def _is_point_valid(point, populated_areas, no_analysis_areas):
+        if not populated_areas.contains(point):
+            return False
+
+        elif no_analysis_areas.contains(point):
+            return False
+
+        else:
+            return True
+
+    def _get_tile_boundaries(self, w, h):
+        left = (w - self.tile_size//2)
+        right = (w + self.tile_size//2)
+        top = (h - self.tile_size//2)
+        bottom = (h + self.tile_size//2)
+        return left, right, top, bottom
+
+    @staticmethod
+    def parse_raster_filename(filename):
         """This method assumes the following format:
         'raster_city_year_month_day...'
         """
@@ -53,3 +92,31 @@ class RasterSplitter(Feature):
         month = int(filename_split[3])
         day = int(filename_split[4])
         return city, year, month, day
+
+    def _assign_closest_previous_annotation_to_raster(self, annotation_data, raster_data):
+        """ This method assigns a date to every raster patch. That date
+        is the date of the annotation that is previous and closest in time.
+        The resulting column will be used to join the annotations
+        to the raster images.
+        """
+        dates_in_annotation_by_city = {}
+        for city in raster_data['city'].unique():
+            annotation_single_city = annotation_data[[key for key in annotation_data if city in key.lower()][0]]
+            dates_in_annotation_by_city[city] = annotation_single_city['date'].unique()
+
+        raster_data['closest_previous_annotation'] = raster_data.apply(lambda x:
+            self._get_closest_previous_date(x['date'], dates_in_annotation_by_city[x['city']]), axis=1)
+        return raster_data
+
+    def _get_closest_previous_date(self, date, pool_of_dates):
+        previous_dates = [date_pool for date_pool in pool_of_dates
+                          if self._is_date_previous_or_same_to_date(date_pool, date)]
+        if not previous_dates:
+            return None
+
+        closest_previous_date = min(previous_dates)
+        return closest_previous_date
+
+    @staticmethod
+    def _is_date_previous_or_same_to_date(date_0, date_1):
+        return (date_0 - date_1) <= timedelta(0)
