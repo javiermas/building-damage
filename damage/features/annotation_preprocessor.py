@@ -7,6 +7,7 @@ from damage.features.base import Preprocessor
 class AnnotationPreprocessor(Preprocessor):
 
     def __init__(self, grid_size=0.035):
+        super().__init__()
         self.grid_size = grid_size
 
     def transform(self, data):
@@ -57,3 +58,11 @@ class AnnotationPreprocessor(Preprocessor):
     def _get_damage_numerical(damage_data):
         mapping = {'No Visible Damage': 0, 'Moderate Damage': 1, 'Severe Damage': 2, 'Destroyed': 3}
         return damage_data.map(mapping)
+    
+    @staticmethod
+    def _crop_annotation_to_longitude_and_latitude(annotation_data, longitude, latitude):
+        mask_longitude = annotation_data['longitude'] >= longitude[0]\
+            & annotation_data['longitude'] < longitude[1]
+        mask_latitude = annotation_data['latitude'] >= latitude[0]\
+            & annotation_data['latitude'] < latitude[1]
+        return annotation_data.loc[mask_longitude & mask_latitude]
