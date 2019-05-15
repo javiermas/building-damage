@@ -29,6 +29,7 @@ class Transformer(ABC):
         handler.setFormatter(formatter)
         self.log.addHandler(handler)
 
+
 class Preprocessor(Transformer):
     """ A Preprocessor class is a Transformer class whose transform
     method takes a dictionary of data and returns that same
