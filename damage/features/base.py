@@ -23,10 +23,11 @@ class Transformer(ABC):
         class_name = self.__class__.__name__
         self.log = logging.getLogger(class_name + str(uuid4()))
         self.log.setLevel('INFO')
-        #handler = logging.StreamHandler()
-        formatter = logging.Formatter('%(levelname)s:::{}:::%(asctime)s:::%(message)s'.format(class_name))
-        #handler.setFormatter(formatter)
-        #self.log.addHandler(handler)
+        handler = logging.StreamHandler()
+        formatter = logging.Formatter(
+            '%(levelname)s:::{}:::%(asctime)s:::%(message)s'.format(class_name))
+        handler.setFormatter(formatter)
+        self.log.addHandler(handler)
 
 class Preprocessor(Transformer):
     """ A Preprocessor class is a Transformer class whose transform
