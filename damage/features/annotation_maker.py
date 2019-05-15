@@ -16,13 +16,18 @@ class AnnotationMaker(Feature):
         annotation_data = annotation_data.dropna(subset=['date']).drop('location_index', axis=1)
         return annotation_data.set_index(['city', 'patch_id', 'date'])
 
-    def _combine_annotation_data(self, annotation_data):
+    @staticmethod
+    def _combine_annotation_data(annotation_data):
         annotations = []
         for name, annotation in annotation_data.items():
             annotations.append(annotation)
 
         annotation_data = pd.concat(annotations).reset_index(drop=True)
         return annotation_data
+
+    @staticmethod
+    def _group_annotations_by_location_index(annotation_data):
+        return annotation_data.groupby(['city', 'location_index', 'date'])['damage_num'].max()
 
     @staticmethod
     def _assign_patch_id_to_annotation(raster_data, annotation_data):
@@ -37,7 +42,3 @@ class AnnotationMaker(Feature):
         # If there's no annotation, we assume it is not destroyed
         annotation_data['damage_num'] = annotation_data['damage_num'].fillna(0)
         return annotation_data
-
-    @staticmethod
-    def _group_annotations_by_location_index(annotation_data):
-        return annotation_data.groupby(['city', 'location_index', 'date'])['damage_num'].max()
