@@ -27,23 +27,17 @@ class RasterSplitter(Feature):
 
     def _split_raster_data(self, data):
         rasters = [(key, value) for key, value in data.items() if 'raster' in key]
-        no_analysis_key = [key for key in data.keys() if 'no_analysis' in key][0]
-        populated_areas_key = [key for key in data.keys() if 'populated' in key][0]
-        populated_areas = data[populated_areas_key] #Hack: assumes one
-        no_analysis_areas = data[no_analysis_key]
-        no_analysis_areas = MultiPolygon(no_analysis_areas['geometry'].tolist()).buffer(0) #Hack: assumes one
         tiles = []
         for name, raster in rasters:
-            array = raster.to_array().astype(float)
+            array = self._raster_to_array(raster).astype(float)
             city, year, month, day = self.parse_raster_filename(name)
-            populated_areas_city = populated_areas.loc[populated_areas['NAME_EN'] == city, 'geometry'].tolist()
-            assert len(populated_areas_city) > 0
-            populated_areas_polygon = MultiPolygon(populated_areas_city)
+            polygons = self._get_polygons_from_data_dict_single_city(data, city)
+            no_analysis_areas_polygon, populated_areas_polygon = polygons
             for w in tqdm(range(self.patch_size//2, (raster.width - self.patch_size//2), self.stride)):
                 for h in range(self.patch_size//2, (raster.height - self.patch_size//2), self.stride):
-                    longitude, latitude = raster.raster.xy(h, w)
-                    point_is_valid = self._is_point_valid(Point(longitude, latitude),
-                                                          populated_areas_polygon, no_analysis_areas)
+                    longitude, latitude = raster.xy(h, w)
+                    point_is_valid = self._is_point_valid(Point(longitude, latitude), populated_areas_polygon,
+                                                          no_analysis_areas_polygon)
                     if not point_is_valid:
                         continue
 
@@ -62,6 +56,21 @@ class RasterSplitter(Feature):
 
         tiles = pd.DataFrame(tiles)
         return tiles
+    
+    @staticmethod
+    def _get_polygons_from_data_dict_single_city(data_dict, city):
+        # No analysis
+        no_analysis_key = [key for key in data_dict if 'no_analysis' in key and city in key.lower()][0]
+        no_analysis_areas = data_dict[no_analysis_key]
+        no_analysis_areas_geometry = no_analysis_areas['geometry'].tolist()
+        no_analysis_areas_polygon = MultiPolygon().buffer(0)
+        # Populated areas
+        populated_areas_key = [key for key in data_dict if 'populated' in key][0]
+        populated_areas = data_dict[populated_areas_key]
+        populated_areas_city = populated_areas.loc[populated_areas['NAME_EN'].str.lower() == city]
+        populated_areas_geometry = populated_areas_city['geometry'].tolist()
+        populated_areas_polygon = MultiPolygon(populated_areas_geometry)
+        return no_analysis_areas_polygon, populated_areas_polygon
 
     @staticmethod
     def _is_point_valid(point, populated_areas, no_analysis_areas):
@@ -120,3 +129,9 @@ class RasterSplitter(Feature):
     @staticmethod
     def _is_date_previous_or_same_to_date(date_0, date_1):
         return (date_0 - date_1) <= timedelta(0)
+    
+    @staticmethod
+    def _raster_to_array(raster):
+        raster_array = raster.read(indexes=[1,2,3])
+        raster_array = np.swapaxes(np.swapaxes(raster_array, 1, 2), 0, 2)
+        return raster_array
