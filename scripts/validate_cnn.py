@@ -1,4 +1,5 @@
 import os
+import argparse
 import json
 from math import ceil
 from time import time
@@ -9,13 +10,17 @@ from damage.data.data_sources import DATA_SOURCES
 from damage.models import CNN, RandomSearch
 from damage import features
 
+parser = argparse.ArgumentParser()
+parser.add_argument('--gpu')
+args = vars(parser.parse_args())
+
 ## Reading
 RASTERS_PATH = 'data/city_rasters'
 ANNOTATIONS_PATH = 'data/annotations'
 POLYGONS_PATH = 'data/polygons'
 RESULTS_PATH = 'logs'
 
-cities = ['daraa']
+cities = ['aleppo']
 data = {}
 for city in cities:
     annotation_files = ['{}/{}'.format(ANNOTATIONS_PATH, f) for f in DATA_SOURCES['aleppo']['annotations']]
@@ -37,7 +42,7 @@ data = {**populated_areas, **data}
 
 ### Processing
 grid_size = 0.035
-patch_size = 64*5
+patch_size = 64
 stride = patch_size
 pipeline = features.Pipeline(
     preprocessors=[
@@ -54,25 +59,24 @@ features = pipeline.transform(data)
 
 #### Modelling
 random_search = RandomSearch()
-os.environ['CUDA_VISIBLE_DEVICES'] = '5'
+os.environ['CUDA_VISIBLE_DEVICES'] = args.get('gpu', None) or '5'
 Model = CNN
 spaces = random_search.sample_cnn(10)
 for space in spaces:
-    import ipdb; ipdb.set_trace()
     data_stream = DataStream(batch_size=space['batch_size'], test_proportion=0.8)
     num_batches = ceil(len(features) / space['batch_size'])
-    train_generator, test_generator = data_stream.split(np.stack(features['image'].values).astype(int),
+    train_generator, test_generator = data_stream.split(np.stack(features['image'].values),
                                                         features['destroyed'].values)
     space['class_weight'] = {
         0: features['destroyed'].mean(),
         1: 1 - features['destroyed'].mean(),
     }
-    cnn = Model(**space)
-    losses = cnn.validate_generator(train_generator, test_generator,
+    model = Model(**space)
+    losses = model.validate_generator(train_generator, test_generator,
                                     steps_per_epoch=num_batches,
                                     validation_steps=1,
                                     **space)
-    losses['model'] = Model.__class__.__name__
+    losses['model'] = str(Model)
     losses['space'] = space
     losses['patch_size'] = patch_size
     with open('{}/experiment_{}.json'.format(RESULTS_PATH, round(time())), 'w') as f:
