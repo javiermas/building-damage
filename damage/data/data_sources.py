@@ -27,3 +27,11 @@ DATA_SOURCES = {
 }
 
 
+
+raster_files = [
+    #'homs_2011_05_21_zoom_19.tif',
+    #'homs_2016_05_30_zoom_19.tif',
+    #'raqqa_2013_01_17_zoom_19.tif',
+    #'raqqa_2016_07_01_zoom_19.tif',
+]
+
