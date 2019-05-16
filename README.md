@@ -12,6 +12,21 @@ pip install -r requirements.txt
 pip install -e .
 ```
 
+## Data architecture
+
+The architecture is designed on three modules: data reading, data processing and data modelling. Following these modules, there are three folders inside of the python library. The folders _data_, _features_ and _modelling_ contain functions and classes with the responsibility of reading, processing and modelling data, respectively.
+
+### Data processing
+Data is processed using functions or _Transformer_ classes that get passed to the _Pipeline_ object. A Transformer class is a class that has a _transform_ method with a data argument. That argument receives a data object, which is a dictionary of this form:
+{
+    key_0: pandas.DataFrame(),
+    ...
+    key_N: pandas.DataFrame()
+}
+
+_Preprocessor_ classes receive that data dictionary and return it with some modifications. Note that _Pipeline_ overwrites the data object when iterating over preprocessors.
+_Feature_ classes receive that dictionary and return a pandas.DataFrame() indexed by 'city', 'patch_id' and 'date'.Note that _Pipeline_ adds a new key to the data dictionary with the feature name that was passed. Once the _Pipeline_ object has finished iterating over preprocessors and features, it merges the dataframes that came out of the feature classes, making use of their indices. Remember that features need to return a pandas.DataFrame that is indexed by 'city', 'patch_id' and 'date'. 
+
 ## Data
 ### Raqqa
 
