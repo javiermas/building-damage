@@ -5,7 +5,7 @@ from time import time
 import numpy as np
 import pandas as pd
 
-from damage.data import read_annotations, read_populated_areas, read_rasters, read_no_analysis_areas
+from damage.data import read_annotations, read_populated_areas, read_rasters, read_no_analysis_areas, DataStream
 from damage.data.data_sources import DATA_SOURCES
 from damage.models import CNN, RandomSearch
 from damage import features
@@ -20,7 +20,6 @@ RESULTS_PATH = 'logs'
 cities = ['aleppo']
 data = {}
 for city in cities:
-    import ipdb; ipdb.set_trace()
     annotation_files = ['{}/{}'.format(ANNOTATIONS_PATH, f) for f in DATA_SOURCES['aleppo']['annotations']]
     annotation_data = read_annotations(file_names=annotation_files)
     raster_files = ['{}/{}'.format(RASTERS_PATH, f) for f in DATA_SOURCES['aleppo']['rasters']]
@@ -73,10 +72,11 @@ for file_name in experiment_files:
             continue
 
 import ipdb; ipdb.set_trace()
-experiment_results = pd.DataFrame(experiment_results)
-space = experiment_results.loc[experiment_results['id'].idxmax(), 'space']
-os.environ['CUDA_VISIBLE_DEVICES'] = '5'
 Model = CNN
+experiment_results = pd.DataFrame(experiment_results)
+experiment_results_single_model = experiment_results.loc[experiment_results['model_name'] == str(Model)]
+space = experiment_results_single_model.loc[experiment_results_single_model['id'].idxmax(), 'space']
+os.environ['CUDA_VISIBLE_DEVICES'] = '5'
 data_stream = DataStream(batch_size=space['batch_size'], test_proportion=0.8)
 num_batches = ceil(len(features) / space['batch_size'])
 last_date = features.reset_index()['date'].max()
