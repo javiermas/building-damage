@@ -29,7 +29,7 @@ class RasterSplitter(Feature):
         rasters = [(key, value) for key, value in data.items() if 'raster' in key]
         tiles = []
         for name, raster in rasters:
-            array = self._raster_to_array(raster).astype(float)
+            array = self._raster_to_array(raster)#.astype(float)
             city, year, month, day = self.parse_raster_filename(name)
             polygons = self._get_polygons_from_data_dict_single_city(data, city)
             no_analysis_areas_polygon, populated_areas_polygon = polygons
