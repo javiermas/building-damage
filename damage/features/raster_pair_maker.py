@@ -44,10 +44,10 @@ class RasterPairMaker(Feature):
                 continue
 
             single_raster = raster_data.loc[raster_data['raster_date'] == date]
-            combined_raster = self._make_single_raster_pair_list(first_raster, single_raster)
+            combined_raster = self._make_single_raster_pair_dataframe(first_raster, single_raster)
+            del single_raster
             combined_rasters.append(combined_raster)
 
-        import ipdb; ipdb.set_trace()
         combined_rasters = pd.concat(combined_rasters)
         del first_raster
         del raster_data
