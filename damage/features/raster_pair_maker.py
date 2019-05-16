@@ -23,14 +23,17 @@ class RasterPairMaker(Feature):
         for city in raster_data['city'].unique():
             raster_data_single_city = raster_data.loc[raster_data['city'] == city]
             raster_pairs_single_city = self._make_raster_pairs_single_city(raster_data_single_city)
+            del raster_data_single_city
             raster_pairs_all_cities.append(raster_pairs_single_city)
-
-        return pd.concat(raster_pairs_all_cities).reset_index()
+        
+        del raster_data
+        raster_pairs_all_cities = pd.concat(raster_pairs_all_cities)
+        return raster_pairs_all_cities
 
     def _make_raster_pairs_single_city(self, raster_data):
         """ This method creates pairs of images
         (image_0, image_1), (image_0, image_2) by concatenating
-        on the third axis (3 to 6 channel images).
+        on the third axis (3 to 6 channel images) for a single city.
         """
         dates = raster_data['raster_date'].unique()
         first_date = raster_data['raster_date'].min()
@@ -41,23 +44,46 @@ class RasterPairMaker(Feature):
                 continue
 
             single_raster = raster_data.loc[raster_data['raster_date'] == date]
-            combined_raster = self._make_single_raster_pair(first_raster, single_raster)
+            combined_raster = self._make_single_raster_pair_list(first_raster, single_raster)
             combined_rasters.append(combined_raster)
 
+        import ipdb; ipdb.set_trace()
         combined_rasters = pd.concat(combined_rasters)
+        del first_raster
+        del raster_data
         return combined_rasters
 
-    def _make_single_raster_pair(self, common_raster, variable_raster):
+    def _make_single_raster_pair_dataframe(self, common_raster, variable_raster):
         """ This method takes two rasters and combined them
         by concatenating the images in them on the second axis.
         It keeps the variable_raster as the data structure and
         concatenates the images of the common_raster to the ones
         in the variable_raster.
         """
-        combined_raster = pd.merge(variable_raster.reset_index(),
-                                   common_raster.reset_index()[['patch_id', 'image']],
+        combined_raster = pd.merge(variable_raster,
+                                   common_raster[['patch_id', 'image']],
                                    on='patch_id')
-        combined_raster['image'] = combined_raster.apply(
-            lambda x: np.concatenate([x['image_x'], x['image_y']], axis=2), axis=1)
+        assert len(combined_raster) == len(variable_raster)
+        del variable_raster
+        combined_raster['image']  = combined_raster.apply(
+            lambda row: np.concatenate([row['image_x'], row['image_y']], axis=2), axis=1)
         combined_raster = combined_raster.drop(['image_x', 'image_y'], axis=1)
         return combined_raster
+
+    def _make_single_raster_pair_list(self, common_raster, variable_raster):
+        """ This method takes two rasters and combined them
+        by concatenating the images in them on the second axis.
+        It keeps the variable_raster as the data structure and
+        concatenates the images of the common_raster to the ones
+        in the variable_raster.
+        """
+        combined_raster = pd.merge(variable_raster,
+                                   common_raster[['patch_id', 'image']],
+                                   on='patch_id')
+        assert len(combined_raster) == len(variable_raster)
+        del variable_raster
+        combined_images = []
+        for index, row in combined_raster.iterrows():
+            combined_images.append(np.concatenate([row['image_x'], row['image_y']], axis=2))
+
+        return combined_images
