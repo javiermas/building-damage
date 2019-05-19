@@ -1,4 +1,5 @@
 import os
+import argparse
 import json
 from math import ceil
 from time import time
@@ -8,8 +9,12 @@ from damage.data import DataStream, load_data_multiple_cities
 from damage.models import CNN, RandomSearch
 from damage import features
 
+parser = argparse.ArgumentParser()
+parser.add_argument('--gpu')
+args = vars(parser.parse_args())
 
-os.environ['CUDA_VISIBLE_DEVICES'] = '5'
+
+os.environ['CUDA_VISIBLE_DEVICES'] = args.get('gpu', None) or '5'
 RESULTS_PATH = 'logs/experiments'
 
 ## Reading
@@ -45,13 +50,13 @@ for space in spaces:
         0: features['destroyed'].mean(),
         1: 1 - features['destroyed'].mean(),
     }
-    cnn = Model(**space)
-    losses = cnn.validate_generator(train_generator, test_generator,
+    model = Model(**space)
+    losses = model.validate_generator(train_generator, test_generator,
                                     steps_per_epoch=num_batches,
                                     validation_steps=1,
                                     **space)
-    losses['model'] = Model.__class__.__name__
+    losses['model'] = str(Model)
     losses['space'] = space
     losses['patch_size'] = patch_size
-    with open('{}/experiment_{}.json'.format(RESULTS_PATH, round(time())), 'w') as f:
+    with open('{}/experiments/experiment_{}.json'.format(RESULTS_PATH, round(time())), 'w') as f:
         json.dump(str(losses), f)
