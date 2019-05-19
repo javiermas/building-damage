@@ -4,40 +4,21 @@ from math import ceil
 from time import time
 import numpy as np
 
-from damage.data import read_annotations, read_populated_areas, read_rasters, read_no_analysis_areas, DataStream
-from damage.data.data_sources import DATA_SOURCES
+from damage.data import DataStream, load_data_multiple_cities
 from damage.models import CNN, RandomSearch
 from damage import features
 
+
+os.environ['CUDA_VISIBLE_DEVICES'] = '5'
+RESULTS_PATH = 'logs/experiments'
+
 ## Reading
-RASTERS_PATH = 'data/city_rasters'
-ANNOTATIONS_PATH = 'data/annotations'
-POLYGONS_PATH = 'data/polygons'
-RESULTS_PATH = 'logs'
-
 cities = ['daraa']
-data = {}
-for city in cities:
-    annotation_files = ['{}/{}'.format(ANNOTATIONS_PATH, f) for f in DATA_SOURCES['aleppo']['annotations']]
-    annotation_data = read_annotations(file_names=annotation_files)
-
-    raster_files = ['{}/{}'.format(RASTERS_PATH, f) for f in DATA_SOURCES['aleppo']['rasters']]
-    raster_data = read_rasters(file_names=raster_files)
-
-    no_analysis_files = ['{}/{}'.format(POLYGONS_PATH, f) for f in DATA_SOURCES['aleppo']['no_analysis']]
-    no_analysis_area = read_no_analysis_areas(file_names=no_analysis_files)
-
-    data = {**data, **annotation_data, **raster_data, **no_analysis_area}
-
-populated_areas = read_populated_areas(file_names=[
-    '{}/populated_areas.shp'.format(POLYGONS_PATH),
-])
-
-data = {**populated_areas, **data}
+data = load_data_multiple_cities(cities)
 
 ### Processing
 grid_size = 0.035
-patch_size = 64*5
+patch_size = 64*10
 stride = patch_size
 pipeline = features.Pipeline(
     preprocessors=[
@@ -53,16 +34,13 @@ pipeline = features.Pipeline(
 features = pipeline.transform(data)
 
 #### Modelling
-random_search = RandomSearch()
-os.environ['CUDA_VISIBLE_DEVICES'] = '5'
+sampler = RandomSearch()
 Model = CNN
-spaces = random_search.sample_cnn(10)
+spaces = sampler.sample_cnn(10)
 for space in spaces:
-    import ipdb; ipdb.set_trace()
     data_stream = DataStream(batch_size=space['batch_size'], test_proportion=0.8)
     num_batches = ceil(len(features) / space['batch_size'])
-    train_generator, test_generator = data_stream.split(np.stack(features['image'].values).astype(int),
-                                                        features['destroyed'].values)
+    train_generator, test_generator = data_stream.split_by_patch_id(features['image'], features['destroyed'])
     space['class_weight'] = {
         0: features['destroyed'].mean(),
         1: 1 - features['destroyed'].mean(),
