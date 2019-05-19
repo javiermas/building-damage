@@ -27,6 +27,9 @@ class CNN(Model):
                                              steps_per_epoch=steps_per_epoch, class_weight=class_weight)
         return model_fit.history
 
+    def predict_generator(self, generator, **kwargs):
+        return self.model.predict_generator(generator)
+
     def _create_model(self):
         layers = []
         for config in self.convolutional_layers:
