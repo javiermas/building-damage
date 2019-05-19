@@ -79,5 +79,5 @@ for space in spaces:
     losses['model'] = str(Model)
     losses['space'] = space
     losses['patch_size'] = patch_size
-    with open('{}/experiment_{}.json'.format(RESULTS_PATH, round(time())), 'w') as f:
+    with open('{}/experiments/experiment_{}.json'.format(RESULTS_PATH, round(time())), 'w') as f:
         json.dump(str(losses), f)
