@@ -43,18 +43,23 @@ sampler = RandomSearch()
 Model = CNN
 spaces = sampler.sample_cnn(10)
 for space in spaces:
-    data_stream = DataStream(batch_size=space['batch_size'], test_proportion=0.8)
+    data_stream = DataStream(batch_size=space['batch_size'], train_proportion=0.8)
     num_batches = ceil(len(features) / space['batch_size'])
-    train_generator, test_generator = data_stream.split_by_patch_id(features['image'], features['destroyed'])
+    train_index_generator, test_index_generator = data_stream.split_by_patch_id(features['image'])
+    train_generator = data_stream.get_train_data_generator_from_index(features['image'], features['destroyed'],
+                                                                      train_index_generator)
+    test_indices = list(test_index_generator)
+    test_generator = data_stream.get_train_data_generator_from_index(features['image'], features['destroyed'],
+                                                                     test_indices)
     space['class_weight'] = {
         0: features['destroyed'].mean(),
         1: 1 - features['destroyed'].mean(),
     }
     model = Model(**space)
     losses = model.validate_generator(train_generator, test_generator,
-                                    steps_per_epoch=num_batches,
-                                    validation_steps=1,
-                                    **space)
+                                     steps_per_epoch=num_batches,
+                                     validation_steps=1,
+                                     **space)
     losses['model'] = str(Model)
     losses['space'] = space
     losses['patch_size'] = patch_size
