@@ -1,7 +1,6 @@
 import os
 from math import ceil
 from time import time
-import numpy as np
 import pandas as pd
 
 from damage.models import CNN
@@ -45,8 +44,11 @@ space['class_weight'] = {
 }
 
 data_stream = DataStream(batch_size=space['batch_size'], train_proportion=0.6)
-train_generator, test_generator, test_patches = data_stream.split_by_patch_id(features['image'],
-                                                                              features['destroyed'])
+train_index_generator, test_index_generator = data_stream.split_by_patch_id(features['image'])
+train_generator = data_stream.get_train_data_generator_from_index(features['image'], features['destroyed'],
+                                                                  train_index_generator)
+test_indices = list(test_index_generator)
+test_generator = data_stream.get_test_data_generator_from_index(features['image'], test_indices)
 
 num_batches = ceil(len(features) / space['batch_size'])
 model = Model(**space)
@@ -55,12 +57,10 @@ model.fit_generator(train_generator,
                     validation_steps=1,
                     **space)
 
-import ipdb; ipdb.set_trace()
-features_test = np.concatenate(list(test_generator))
-predictions = model.predict_generator(features_test, steps=ceil(len(test_patches)/batch_size))
+predictions = model.predict_generator(test_generator, steps=len(test_indices))
 predictions = pd.DataFrame({
-    'prediction': predictions,
-}, features_test.index)
-file_name = '{}/prediction_{}.p'.format(RESULTS_PATH, time())
+    'prediction': predictions[:, 1],
+}, index=[i for indices in test_indices for i in indices])
+file_name = '{}/prediction_{}.p'.format(RESULTS_PATH, round(time()))
 predictions.to_pickle(file_name)
 print('Store predictions on file: {}'.format(file_name))
