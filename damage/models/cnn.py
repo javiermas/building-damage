@@ -8,6 +8,9 @@ from damage.models.base import Model
 
 class CNN(Model):
 
+    metrics = ['accuracy', precision, recall, true_positives, true_negatives,
+               false_negatives, false_positives, positives, negatives]
+
     def __init__(self, convolutional_layers, dense_units=64, learning_rate=0.1,
                  num_classes=2, loss_weights=None, **kwargs):
         self.convolutional_layers = convolutional_layers
@@ -43,9 +46,7 @@ class CNN(Model):
         ])
         model = Sequential(layers)
         model.compile(optimizer='adam', loss='binary_crossentropy', learning_rate=self.learning_rate,
-                      metrics=['accuracy', precision, recall, true_positives, true_negatives,
-                               false_negatives, false_positives, positives, negatives],
-                      loss_weights=self.loss_weights)
+                      metrics=self.metrics, loss_weights=self.loss_weights)
         return model
 
     @staticmethod
