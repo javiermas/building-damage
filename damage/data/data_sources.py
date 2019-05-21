@@ -31,4 +31,64 @@ DATA_SOURCES = {
             '5_No_Analysis_Areas_Daraa.shp',
         ],
     },
+    'damascus': {
+        'annotations': [
+            '4_Damage_Sites_Damascus_CDA.shp',
+        ],
+        'rasters': [
+            'damascus_2011_08_22_zoom_19.tif',
+            'damascus_2017_01_22_zoom_19.tif',
+        ],
+        'no_analysis': [
+            '5_No_Analysis_Areas_Damascus.shp',
+        ],
+    },
+    'raqqa': {
+        'annotations': [
+            '4_Damage_Sites_Raqqa_CDA.shp',
+        ],
+        'rasters': [
+            'raqqa_2013_01_17_zoom_19.tif',
+            'raqqa_2015_02_02_zoom_19.tif',
+        ],
+        'no_analysis': [
+            '5_No_Analysis_Areas_Raqqa.shp',
+        ],
+    },
+    'homs': {
+        'annotations': [
+            '4_Damage_Sites_Homs_CDA.shp',
+        ],
+        'rasters': [
+            'homs_2014_04_03_zoom_19.tif',
+            'homs_2011_05_21_zoom_19.tif',
+        ],
+        'no_analysis': [
+            '5_No_Analysis_Areas_Homs.shp',
+        ],
+    },
+    'idlib': {
+        'annotations': [
+            '4_Damage_Sites_Idlib_CDA.shp',
+        ],
+        'rasters': [
+            'idlib_2011_07_31_zoom_19.tif',
+            'idlib_2016_08_01_zoom_19.tif',
+        ],
+        'no_analysis': [
+            '5_No_Analysis_Areas_Idlib.shp',
+        ],
+    },
+    'deir': {
+        'annotations': [
+            '4_Damage_Sites_Deir_CDA.shp',
+        ],
+        'rasters': [
+            'deir_2016_05_25_zoom_19.tif',
+            'deir_2012_12_05_zoom_19.tif',
+        ],
+        'no_analysis': [
+            '5_No_Analysis_Areas_Deir.shp',
+        ],
+    },
 }
