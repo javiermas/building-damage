@@ -4,9 +4,16 @@ DATA_SOURCES = {
             '6_Damage_Sites_Aleppo_SDA.shp',
         ],
         'rasters': [
+            'aleppo_2013_05_26_zoom_19.tif',
             'aleppo_2011_06_26_zoom_19.tif',
+            'aleppo_2014_07_14_zoom_19.tif',
+            'aleppo_2014_05_23_zoom_19.tif',
+            'aleppo_2013_09_23_zoom_19.tif',
             'aleppo_2016_09_18_zoom_19.tif',
+            'aleppo_2015_10_26_zoom_19.tif',
             'aleppo_2016_10_19_zoom_19.tif',
+            'aleppo_2015_11_22_zoom_19.tif',
+            'aleppo_2013_10_31_zoom_19.tif',
         ],
         'no_analysis': [
             '5_No_Analysis_Areas_Aleppo.shp',
@@ -25,13 +32,3 @@ DATA_SOURCES = {
         ],
     },
 }
-
-
-
-raster_files = [
-    #'homs_2011_05_21_zoom_19.tif',
-    #'homs_2016_05_30_zoom_19.tif',
-    #'raqqa_2013_01_17_zoom_19.tif',
-    #'raqqa_2016_07_01_zoom_19.tif',
-]
-
