@@ -25,17 +25,7 @@ class DataStream:
             yield index_batch
 
     @staticmethod
-    def get_train_data_generator_from_index(features, target, index):
-        while True:
-            for _index in index:
-                batch = (
-                    np.stack(features.loc[_index]).astype(float),
-                    target.loc[_index].values
-                )
-                yield batch
-    
-    @staticmethod
-    def get_test_data_generator_from_index(features, index):
+    def get_data_generator_from_index(data, index):
         for _index in index:
-            batch = np.stack(features.loc[_index]).astype(float)
+            batch = tuple([np.stack(dataframe.loc[_index]).astype(float) for dataframe in data])
             yield batch
