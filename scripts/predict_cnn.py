@@ -3,12 +3,13 @@ from math import ceil
 from time import time
 import argparse
 import pandas as pd
+import logging
 
 from damage.models import CNN
 from damage.data import DataStream, load_experiment_results
 from damage import features
 
-
+   
 parser = argparse.ArgumentParser()
 parser.add_argument('features')
 parser.add_argument('--gpu')
@@ -24,10 +25,10 @@ features = pd.read_pickle('{}/{}'.format(FEATURES_PATH, features_file_name))
 
 #### Modelling
 Model = CNN
+
 experiment_results = load_experiment_results()
-experiment_results_single_model = experiment_results.loc[experiment_results['model'] == 'ABCMeta']
+experiment_results_single_model = experiment_results.loc[experiment_results['model'] == str(Model)]
 space = experiment_results_single_model.loc[experiment_results_single_model['id'].idxmax(), 'space']
-space['epochs'] = 1
 space['class_weight'] = {
     0: features['destroyed'].mean(),
     1: 1 - features['destroyed'].mean(),
