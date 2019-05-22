@@ -14,7 +14,7 @@ class AnnotationPreprocessor(Preprocessor):
         for key, value in data.items():
             if 'annotation' not in key:
                 continue
-
+		
             value = self._add_latitude_and_longitude(value)
             value['location_index'] = geo_location_index(value['latitude'], value['longitude'], self.grid_size)
             value = value.rename({'StlmtNme': 'city'}, axis=1)
@@ -32,16 +32,11 @@ class AnnotationPreprocessor(Preprocessor):
 
     def _unpivot_annotation(self, annotation_data):
         damage_columns = [col for col in annotation_data if 'DmgCls' in col and 'Grp' not in col]
-        damage_change_columns = [col for col in annotation_data if 'DmgSts' in col]
-        other_columns = [col for col in annotation_data if col not in damage_columns + damage_change_columns]
-        damage_data = pd.melt(annotation_data, id_vars=other_columns, value_vars=damage_columns,
-                              value_name='damage')
-        damage_change_data = pd.melt(annotation_data, id_vars=other_columns, value_vars=damage_change_columns,
-                                     value_name='damage_change')
-        damage_data['date'] = self._create_date_column(damage_data)
-        damage_change_data['date'] = self._create_date_column(damage_change_data)
+        other_columns = [col for col in annotation_data if col not in damage_columns]
+        annotation_data = pd.melt(annotation_data, id_vars=other_columns, value_vars=damage_columns,
+                                  value_name='damage')
+        annotation_data['date'] = self._create_date_column(annotation_data)
         id_vars = ['latitude', 'longitude', 'date']
-        annotation_data = pd.merge(damage_data, damage_change_data[id_vars+['damage_change']], on=id_vars)
         # Some observations exist in one of the DmgCls columns but are None in the rest
         # (they did not assess them), we will drop those.
         annotation_data = annotation_data.dropna(subset=['date']).drop(['variable'], axis=1)
