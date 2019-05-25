@@ -28,9 +28,14 @@ Model = CNN
 spaces = sampler.sample_cnn(10)
 for space in spaces:
     space['epochs'] = 1
-    data_stream = DataStream(batch_size=space['batch_size'], train_proportion=0.8)
+    class_proportion = {
+        1: 0.1,
+    }
+    data_stream = DataStream(batch_size=space['batch_size'], train_proportion=0.8,
+                             class_proportion=class_proportion)
     num_batches = ceil(len(features) / space['batch_size'])
-    train_index_generator, test_index_generator = data_stream.split_by_patch_id(features['image'])
+    train_index_generator, test_index_generator = data_stream.split_by_patch_id(features['image'],
+                                                                                features['destroyed'])
     train_generator = data_stream.get_data_generator_from_index(
         [features['image'], features['destroyed']], train_index_generator)
     test_indices = list(test_index_generator)
