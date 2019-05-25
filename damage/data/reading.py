@@ -1,7 +1,7 @@
 import os
+import json
 import geopandas as gpd
 import pandas as pd
-import json
 import rasterio
 
 from damage.data.data_sources import DATA_SOURCES
@@ -10,28 +10,30 @@ from damage.data.data_sources import DATA_SOURCES
 RASTERS_PATH = 'data/city_rasters'
 ANNOTATIONS_PATH = 'data/annotations'
 POLYGONS_PATH = 'data/polygons'
+EXPERIMENTS_PATH = 'logs/experiments'
 
 
-def load_data_multiple_cities(cities):
+def load_data_multiple_cities(cities, rasters_path=RASTERS_PATH, annotations_path=ANNOTATIONS_PATH,
+                              polygons_path=POLYGONS_PATH):
     data = {}
     for city in cities:
-        data = {**data, **load_data_single_city(city)}
+        data = {**data, **load_data_single_city(city, rasters_path, annotations_path, polygons_path)}
 
     populated_areas = read_populated_areas(file_names=[
-        '{}/populated_areas.shp'.format(POLYGONS_PATH),
+        '{}/populated_areas.shp'.format(polygons_path),
     ])
     data = {**populated_areas, **data}
     return data
 
 
-def load_data_single_city(city):
-    annotation_files = ['{}/{}'.format(ANNOTATIONS_PATH, f) for f in DATA_SOURCES[city]['annotations']]
+def load_data_single_city(city, rasters_path, annotations_path, polygons_path):
+    annotation_files = ['{}/{}'.format(annotations_path, f) for f in DATA_SOURCES[city]['annotations']]
     annotation_data = read_annotations(file_names=annotation_files)
 
-    raster_files = ['{}/{}'.format(RASTERS_PATH, f) for f in DATA_SOURCES[city]['rasters']]
+    raster_files = ['{}/{}'.format(rasters_path, f) for f in DATA_SOURCES[city]['rasters']]
     raster_data = read_rasters(file_names=raster_files)
 
-    no_analysis_files = ['{}/{}'.format(POLYGONS_PATH, f) for f in DATA_SOURCES[city]['no_analysis']]
+    no_analysis_files = ['{}/{}'.format(polygons_path, f) for f in DATA_SOURCES[city]['no_analysis']]
     no_analysis_area = read_no_analysis_areas(file_names=no_analysis_files)
 
     data = {**annotation_data, **raster_data, **no_analysis_area}
@@ -68,7 +70,7 @@ def read_no_analysis_areas(file_names):
 
     return data
 
-def load_experiment_results(path='logs/experiments'):
+def load_experiment_results(path=EXPERIMENTS_PATH):
     experiment_files = os.listdir(path)
     experiment_results = []
     for file_name in experiment_files:
