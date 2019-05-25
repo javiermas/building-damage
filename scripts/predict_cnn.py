@@ -2,8 +2,9 @@ import os
 from math import ceil
 from time import time
 import argparse
-import pandas as pd
 import logging
+from functools import reduce
+import pandas as pd
 
 from damage.models import CNN
 from damage.data import DataStream, load_experiment_results
@@ -51,7 +52,7 @@ model.fit_generator(train_generator,
 predictions = model.predict_generator(test_generator, steps=len(test_indices))
 predictions = pd.DataFrame({
     'prediction': predictions[:, 1],
-}, index=[i for indices in test_indices for i in indices])
+}, index=reduce(lambda l, r: l.union(r), test_indices))
 file_name = '{}/prediction_{}.p'.format(RESULTS_PATH, round(time()))
 predictions.to_pickle(file_name)
 print('Store predictions on file: {}'.format(file_name))
