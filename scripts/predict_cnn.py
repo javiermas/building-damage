@@ -27,22 +27,29 @@ features = pd.read_pickle('{}/{}'.format(FEATURES_PATH, features_file_name))
 #### Modelling
 Model = CNN
 
+# Choose space
 experiment_results = load_experiment_results()
 experiment_results_single_model = experiment_results.loc[experiment_results['model'] == str(Model)]
 space = experiment_results_single_model.loc[experiment_results_single_model['id'].idxmax(), 'space']
-space['class_weight'] = {
-    0: features['destroyed'].mean(),
-    1: 1 - features['destroyed'].mean(),
+class_proportion = {
+    1: 0.1,
 }
-
-data_stream = DataStream(batch_size=space['batch_size'], train_proportion=0.6)
-train_index_generator, test_index_generator = data_stream.split_by_patch_id(features['image'])
+space['class_weight'] = {
+    0: class_proportion[1],
+    1: 1 - class_proportion[1],
+}
+space['epochs'] = 10
+# Get data generators
+data_stream = DataStream(batch_size=space['batch_size'], train_proportion=0.6,
+                         class_proportion=class_proportion)
+train_index_generator, test_index_generator = data_stream.split_by_patch_id(features['image'], features['destroyed'])
 train_generator = data_stream.get_data_generator_from_index([features['image'], features['destroyed']],
                                                             train_index_generator)
 test_indices = list(test_index_generator)
 test_generator = data_stream.get_data_generator_from_index([features['image']], test_indices)
 
 num_batches = ceil(len(features) / space['batch_size'])
+# Fit model and predict
 model = Model(**space)
 model.fit_generator(train_generator,
                     steps_per_epoch=num_batches,
