@@ -29,7 +29,7 @@ spaces = sampler.sample_cnn(10)
 for space in spaces:
     space['epochs'] = 1
     class_proportion = {
-        1: 0.1,
+        1: 0.3,
     }
     data_stream = DataStream(batch_size=space['batch_size'], train_proportion=0.8,
                              class_proportion=class_proportion)
@@ -42,8 +42,8 @@ for space in spaces:
     test_generator = data_stream.get_data_generator_from_index(
         [features['image'], features['destroyed']], test_indices)
     space['class_weight'] = {
-        0: features['destroyed'].mean(),
-        1: 1 - features['destroyed'].mean(),
+        0: class_proportion[1],
+        1: 1 - class_proportion[1],
     }
     model = Model(**space)
     losses = model.validate_generator(train_generator, test_generator,
