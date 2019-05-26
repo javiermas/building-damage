@@ -45,7 +45,7 @@ class Pipeline(Transformer):
             data[feature_name] = feature(data)
 
         feature_data = [data[name] for name in self.feature_names if name in data.keys()]
-        feature_data = self._merge_feature_data(feature_data)
+        feature_data = self._merge_feature_data(feature_data).dropna()
         return feature_data
 
     def _merge_feature_data(self, feature_data):
