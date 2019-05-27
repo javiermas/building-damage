@@ -1,7 +1,6 @@
 from math import ceil
 import random
 import numpy as np
-from sklearn.model_selection import StratifiedShuffleSplit
 
 
 class DataStream:
@@ -13,7 +12,7 @@ class DataStream:
     def split_by_patch_id(self, x, y):
         unique_patches = x.index.get_level_values('patch_id').unique().tolist()
         train_patches = random.sample(unique_patches, round(len(unique_patches)*self.train_proportion))
-        test_patches = [patch for patch in unique_patches if patch not in train_patches]
+        test_patches = list(set(unique_patches) - set(train_patches))
         if self.class_proportion is not None:
             train_patches = self._upsample_class_proportion_in_patches(y, train_patches)
 
@@ -39,7 +38,7 @@ class DataStream:
     @staticmethod
     def get_data_generator_from_index(data, index):
         for _index in index:
-            batch = tuple([np.stack(dataframe.loc[_index]).astype(float) for dataframe in data])
+            batch = tuple([np.stack(dataframe.loc[_index]) * 1.0 for dataframe in data])
             yield batch
 
     def _upsample_class_proportion_in_patches(self, y, patches):
@@ -55,7 +54,7 @@ class DataStream:
             # This doesn't take into consideration that the total amount of patches
             # will change, so we will not get the actual proportion
             n_patches_to_add = round((proportion - proportion_current)*len(patches))
-            patches_to_add = random.choices(level_patches_current, k=n_patches_to_add)
+            patches_to_add = [random.choice(level_patches_current) for _ in range(n_patches_to_add)]
             patches += patches_to_add
 
         return patches
