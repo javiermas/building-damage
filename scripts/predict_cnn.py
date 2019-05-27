@@ -1,4 +1,5 @@
 import os
+import pickle
 from math import ceil
 from time import time
 import argparse
@@ -8,9 +9,8 @@ import pandas as pd
 
 from damage.models import CNN
 from damage.data import DataStream, load_experiment_results
-from damage import features
 
-   
+
 parser = argparse.ArgumentParser()
 parser.add_argument('features')
 parser.add_argument('--gpu')
@@ -22,7 +22,7 @@ FEATURES_PATH = 'logs/features'
 features_file_name = args.get('features')
 
 # Reading
-features = pd.read_pickle('{}/{}'.format(FEATURES_PATH, features_file_name))
+#features = pd.read_pickle('{}/{}'.format(FEATURES_PATH, features_file_name))
 
 #### Modelling
 Model = CNN
@@ -32,14 +32,15 @@ experiment_results = load_experiment_results()
 experiment_results_single_model = experiment_results.loc[experiment_results['model'] == str(Model)]
 space = experiment_results_single_model.loc[experiment_results_single_model['id'].idxmax(), 'space']
 class_proportion = {
-    1: 0.1,
+    1: 0.4,
 }
 space['class_weight'] = {
     0: class_proportion[1],
     1: 1 - class_proportion[1],
 }
-space['epochs'] = 10
+space['epochs'] = 50
 # Get data generators
+'''
 data_stream = DataStream(batch_size=space['batch_size'], train_proportion=0.6,
                          class_proportion=class_proportion)
 train_index_generator, test_index_generator = data_stream.split_by_patch_id(features['image'], features['destroyed'])
@@ -47,12 +48,21 @@ train_generator = data_stream.get_data_generator_from_index([features['image'], 
                                                             train_index_generator)
 test_indices = list(test_index_generator)
 test_generator = data_stream.get_data_generator_from_index([features['image']], test_indices)
+'''
+train_path = '{}/{}/train'.format(FEATURES_PATH, features_file_name)
+test_path = '{}/{}/test'.format(FEATURES_PATH, features_file_name)
+train_generator = DataStream.get_data_generator_from_path(train_path)
+train_generator = (batch for batch in train_generator for epoch in range(space['epochs']))
+test_generator = DataStream.get_data_generator_from_path(test_path)
+with open('{}/{}/train/index.p'.format(FEATURES_PATH, features_file_name), 'rb') as f:
+    train_indices = pickle.load(f)
+with open('{}/{}/test/index.p'.format(FEATURES_PATH, features_file_name), 'rb') as f:
+    test_indices = pickle.load(f)
 
-num_batches = ceil(len(features) / space['batch_size'])
 # Fit model and predict
 model = Model(**space)
 model.fit_generator(train_generator,
-                    steps_per_epoch=num_batches,
+                    steps_per_epoch=len(train_indices),
                     validation_steps=1,
                     **space)
 
