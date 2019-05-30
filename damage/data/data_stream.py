@@ -1,5 +1,3 @@
-import pickle
-import os
 from math import ceil
 import random
 import numpy as np
@@ -20,45 +18,28 @@ class DataStream:
 
         train_index = x.loc[x.index.get_level_values('patch_id').isin(train_patches)].index
         test_index = x.loc[x.index.get_level_values('patch_id').isin(test_patches)].index
-        train_index_generator = self._get_index_generator(train_index)
-        test_index_generator = self._get_index_generator(test_index)
+        train_index_generator = self._get_train_index_generator(train_index)
+        test_index_generator = self._get_test_index_generator(test_index)
         return train_index_generator, test_index_generator
 
-    def _get_index_generator(self, index):
+    def _get_train_index_generator(self, index):
+        num_batches = ceil(len(index) / self.batch_size)
+        while True:
+            for i in range(num_batches):
+                index_batch = index[(i*self.batch_size): ((i+1)*self.batch_size)]
+                yield index_batch
+
+    def _get_test_index_generator(self, index):
         num_batches = ceil(len(index) / self.batch_size)
         for i in range(num_batches):
             index_batch = index[(i*self.batch_size): ((i+1)*self.batch_size)]
             yield index_batch
 
-    '''
     @staticmethod
     def get_data_generator_from_index(data, index):
         for _index in index:
-            batch = tuple([np.stack(dataframe.loc[_index]) for dataframe in data])
+            batch = tuple([np.stack(dataframe.loc[_index]) * 1.0 for dataframe in data])
             yield batch
-    '''
-    @staticmethod
-    def get_data_generator_from_path(path):
-        files = os.listdir(path)
-        for elem in files:
-            if 'index' in elem:
-                continue
-
-            with open('{}/{}'.format(path, elem), 'rb') as f:
-                batch = tuple([b * 1.0 for b in pickle.load(f)])
-                yield batch
-
-    @staticmethod
-    def store_data_batches_from_index(path, data, index):
-        index = list(index)
-        for i, _index in enumerate(index):
-            batch = tuple([np.float16(np.stack(dataframe.loc[_index])) for dataframe in data])
-            with open('{}/{}.p'.format(path, i), 'wb') as f:
-                pickle.dump(batch, f)
-
-        with open('{}/index.p'.format(path), 'wb') as f:
-            pickle.dump(index, f)
-
 
     def _upsample_class_proportion_in_patches(self, y, patches):
         for level, proportion in self.class_proportion.items():
