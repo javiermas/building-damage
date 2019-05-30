@@ -11,7 +11,7 @@ def positives(y_true, y_pred):
 
 
 def negatives(y_true, y_pred):
-    return K.sum(1 - y_true)
+    return K.mean(1 - y_true)
 
 
 def true_positives(y_true, y_pred):
