@@ -35,7 +35,7 @@ class AnnotationMaker(Feature):
         # Pandas seems to have a bug that changes the dtype of
         # a date column to datetime automatically when assigning to index
         raster_data_no_index = raster_data.reset_index()
-        raster_locations_no_index = raster_data_no_index[['city', 'patch_id', 'location_index', 'date']].copy()
+        raster_locations_no_index = raster_data_no_index[['city', 'patch_id', 'location_index', 'date']]
         raster_locations_no_index['date'] = raster_locations_no_index['date'].dt.date
         raster_locations_long_gap = raster_locations_no_index.loc[
             (pd.to_datetime(raster_data_no_index['raster_date']) - raster_data_no_index['date'])
@@ -49,7 +49,7 @@ class AnnotationMaker(Feature):
                                             on=['city', 'location_index', 'date'], how='inner')
         annotation_data_short_gap = pd.merge(raster_locations_short_gap, annotation_data.reset_index(),
                                              on=['city', 'location_index', 'date'], how='left')
-        annotation_data = pd.concat([annotation_data_long_gap, annotation_data_short_gap], sort=False)
+        annotation_data = pd.concat([annotation_data_long_gap, annotation_data_short_gap])
         # If there's no annotation, we assume it is not destroyed
         annotation_data['damage_num'] = annotation_data['damage_num'].fillna(0)
         return annotation_data
