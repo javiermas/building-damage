@@ -1,15 +1,13 @@
 from tensorflow.keras.layers import Conv2D, MaxPooling2D, Dense, Flatten, BatchNormalization
 from tensorflow.keras.models import Sequential
 
-from damage.models.losses import (precision, recall, true_positives, true_negatives,
-                                  false_positives, false_negatives, positives, negatives)
+from damage.models.losses import *
 from damage.models.base import Model
 
 
 class CNN(Model):
 
-    metrics = ['accuracy', precision, recall, true_positives, true_negatives,
-               false_negatives, false_positives, positives, negatives]
+    metrics = ['accuracy', precision, recall, negatives]
 
     def __init__(self, convolutional_layers, dense_units=64, learning_rate=0.1,
                  num_classes=2, loss_weights=None, **kwargs):
@@ -42,7 +40,7 @@ class CNN(Model):
             Flatten(),
             Dense(units=self.dense_units),
             BatchNormalization(),
-            Dense(units=self.num_classes, activation='softmax'),
+            Dense(units=1, activation='softmax'),
         ])
         model = Sequential(layers)
         model.compile(optimizer='adam', loss='binary_crossentropy', learning_rate=self.learning_rate,
