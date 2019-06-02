@@ -2,8 +2,8 @@ import os
 from math import ceil
 from time import time
 import argparse
-from functools import reduce
 import pandas as pd
+import tensorflow as tf
 from tensorflow.data import Dataset
 
 from damage.models import CNN, RandomSearch
@@ -23,9 +23,9 @@ features_file_name = args.get('features')
 
 # Reading
 features = pd.read_pickle('{}/{}'.format(FEATURES_PATH, features_file_name))
-features_destroyed = features.loc[features['destroyed'] == 1].sample(1000)
-features_non_destroyed = features.loc[features['destroyed'] == 0].sample(1000)
-features = pd.concat([features_destroyed, features_non_destroyed])
+#features_destroyed = features.loc[features['destroyed'] == 1].sample(1000)
+#features_non_destroyed = features.loc[features['destroyed'] == 0].sample(1000)
+#features = pd.concat([features_destroyed, features_non_destroyed])
 
 #### Modelling
 Model = CNN
@@ -57,7 +57,6 @@ test_generator = data_stream.get_test_data_generator_from_index(features['image'
 
 num_batches = ceil(len(features) / space['batch_size'])
 # Fit model and predict
-import tensorflow as tf
 train_dataset = Dataset.from_generator(lambda: train_generator, (tf.float32, tf.int32))
 model = Model(**space)
 model.fit_generator(train_dataset,
@@ -66,8 +65,7 @@ model.fit_generator(train_dataset,
                     **space)
 
 test_dataset = Dataset.from_generator(lambda: test_generator, tf.float32)
-predictions = model.predict_generator(test_dataset, steps=len(test_indices))
-import ipdb; ipdb.set_trace()
+predictions = model.predict_generator(test_dataset)
 
 test_indices_flattened = test_indices[0]
 for index in test_indices[1:]:
