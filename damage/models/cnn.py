@@ -28,8 +28,8 @@ class CNN(Model):
                                              steps_per_epoch=steps_per_epoch, class_weight=class_weight)
         return model_fit.history
 
-    def predict_generator(self, generator, steps, **kwargs):
-        return self.model.predict_generator(generator, steps=steps)
+    def predict_generator(self, generator, **kwargs):
+        return self.model.predict_generator(generator, **kwargs)
 
     def _create_model(self):
         layers = []
