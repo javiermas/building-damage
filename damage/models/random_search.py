@@ -26,6 +26,6 @@ class RandomSearch:
             'learning_rate': random.choice(np.geomspace(1e-2, 1)),
             'batch_size': random.choice(range(5, 200)),
             'convolutional_layers': convolutional_layers,
-            'epochs': random.choice(range(20, 100)),
+            'epochs': random.choice(range(5, 15)),
         }
         return space
