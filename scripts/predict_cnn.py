@@ -4,6 +4,7 @@ from time import time
 import argparse
 from functools import reduce
 import pandas as pd
+from tensorflow.data import Dataset
 
 from damage.models import CNN
 from damage.data import DataStream, load_experiment_results
@@ -49,13 +50,16 @@ test_generator = data_stream.get_data_generator_from_index([features['image']], 
 
 num_batches = ceil(len(features) / space['batch_size'])
 # Fit model and predict
+import tensorflow as tf
+train_dataset = Dataset.from_generator(lambda: train_generator, (tf.float32, tf.int32))
 model = Model(**space)
-model.fit_generator(train_generator,
+model.fit_generator(train_dataset,
                     steps_per_epoch=num_batches,
                     validation_steps=1,
                     **space)
 
-predictions = model.predict_generator(test_generator, steps=len(test_indices))
+test_dataset = Dataset.from_generator(lambda: test_generator, tf.float32)
+predictions = model.predict_generator(test_dataset, steps=len(test_indices))
 predictions = pd.DataFrame({
     'prediction': predictions.reshape(-1),
 }, index=reduce(lambda l, r: l.union(r), test_indices))
