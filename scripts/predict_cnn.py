@@ -2,7 +2,6 @@ import os
 from math import ceil
 from time import time
 import argparse
-import logging
 from functools import reduce
 import pandas as pd
 
@@ -10,7 +9,7 @@ from damage.models import CNN, RandomSearch
 from damage.data import DataStream, load_experiment_results
 from damage import features
 
-   
+
 parser = argparse.ArgumentParser()
 parser.add_argument('features')
 parser.add_argument('--gpu')
@@ -39,12 +38,13 @@ else:
     space = RandomSearch._sample_single_cnn_space()
 
 class_proportion = {
-    1: 0.3,
+    1: 0.2,
 }
 space['class_weight'] = {
     0: (class_proportion[1] -0.1),
     1: 1 - (class_proportion[1] -0.1),
 }
+space['epochs'] = 3
 # Get data generators
 data_stream = DataStream(batch_size=space['batch_size'], train_proportion=0.7,
                          class_proportion=class_proportion)
