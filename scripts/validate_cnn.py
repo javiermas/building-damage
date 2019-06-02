@@ -21,18 +21,19 @@ features_file_name = args.get('features')
 
 # Reading
 features = pd.read_pickle('{}/{}'.format(FEATURES_PATH, features_file_name))
+#features_destroyed = features.loc[features['destroyed'] == 1].sample(1000)
+#features_non_destroyed = features.loc[features['destroyed'] == 0].sample(1000)
+#features = pd.concat([features_destroyed, features_non_destroyed])
 
 #### Modelling
 sampler = RandomSearch()
 Model = CNN
 spaces = sampler.sample_cnn(10)
 for space in spaces:
-    space['epochs'] = 1
     class_proportion = {
         1: 0.3,
     }
-    data_stream = DataStream(batch_size=space['batch_size'], train_proportion=0.8,
-                             class_proportion=class_proportion)
+    data_stream = DataStream(batch_size=space['batch_size'], train_proportion=0.7, class_proportion=class_proportion)
     num_batches = ceil(len(features) / space['batch_size'])
     train_index_generator, test_index_generator = data_stream.split_by_patch_id(features['image'],
                                                                                 features['destroyed'])
@@ -42,8 +43,8 @@ for space in spaces:
     test_generator = data_stream.get_data_generator_from_index(
         [features['image'], features['destroyed']], test_indices)
     space['class_weight'] = {
-        0: class_proportion[1],
-        1: 1 - class_proportion[1],
+        0: (class_proportion[1] -.1),
+        1: 1 - (class_proportion[1] -.1),
     }
     model = Model(**space)
     losses = model.validate_generator(train_generator, test_generator,

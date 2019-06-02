@@ -36,9 +36,15 @@ class DataStream:
             yield index_batch
 
     @staticmethod
-    def get_data_generator_from_index(data, index):
+    def get_train_data_generator_from_index(data, index):
         for _index in index:
             batch = tuple([np.stack(dataframe.loc[_index]) * 1.0 for dataframe in data])
+            yield batch
+
+    @staticmethod
+    def get_test_data_generator_from_index(data, index):
+        for _index in index:
+            batch = np.stack(data.loc[_index]) * 1.0
             yield batch
 
     def _upsample_class_proportion_in_patches(self, y, patches):
