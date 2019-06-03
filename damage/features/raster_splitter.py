@@ -19,8 +19,7 @@ class RasterSplitter(Feature):
     def transform(self, data):
         raster_data = self._split_raster_data(data)
         annotation_data = {name: _data for name, _data in data.items() if 'annotation' in name}
-        raster_data = self._assign_closest_previous_annotation_to_raster(annotation_data, raster_data)
-        raster_data = raster_data.rename(columns={'date': 'raster_date', 'closest_previous_annotation': 'date'})
+        #raster_data = self._assign_closest_previous_annotation_to_raster(annotation_data, raster_data)
         raster_data['location_index'] = geo_location_index(raster_data['latitude'], raster_data['longitude'],
                                                            grid_size=self.grid_size)
         return raster_data.set_index(['city', 'patch_id', 'date'])
@@ -102,34 +101,6 @@ class RasterSplitter(Feature):
         day = int(filename_split[4])
         return city, year, month, day
 
-    def _assign_closest_previous_annotation_to_raster(self, annotation_data, raster_data):
-        """ This method assigns a date to every raster patch. That date
-        is the date of the annotation that is previous and closest in time.
-        The resulting column will be used to join the annotations
-        to the raster images.
-        """
-        dates_in_annotation_by_city = {}
-        for city in raster_data['city'].unique():
-            annotation_single_city = annotation_data[[key for key in annotation_data if city in key.lower()][0]]
-            dates_in_annotation_by_city[city] = annotation_single_city['date'].unique()
-
-        raster_data['closest_previous_annotation'] = raster_data.apply(lambda x:
-            self._get_closest_previous_date(x['date'], dates_in_annotation_by_city[x['city']]), axis=1)
-        return raster_data
-
-    def _get_closest_previous_date(self, date, pool_of_dates):
-        previous_dates = [date_pool for date_pool in pool_of_dates
-                          if self._is_date_previous_or_same_to_date(date_pool, date)]
-        if not previous_dates:
-            return None
-
-        closest_previous_date = min(previous_dates)
-        return closest_previous_date
-
-    @staticmethod
-    def _is_date_previous_or_same_to_date(date_0, date_1):
-        return (date_0 - date_1) <= timedelta(0)
-    
     @staticmethod
     def _raster_to_array(raster):
         raster_array = raster.read(indexes=[1,2,3])

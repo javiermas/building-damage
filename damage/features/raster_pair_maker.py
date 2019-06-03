@@ -25,7 +25,7 @@ class RasterPairMaker(Feature):
             raster_pairs_single_city = self._make_raster_pairs_single_city(raster_data_single_city)
             del raster_data_single_city
             raster_pairs_all_cities.append(raster_pairs_single_city)
-        
+
         del raster_data
         raster_pairs_all_cities = pd.concat(raster_pairs_all_cities)
         return raster_pairs_all_cities
@@ -35,15 +35,15 @@ class RasterPairMaker(Feature):
         (image_0, image_1), (image_0, image_2) by concatenating
         on the third axis (3 to 6 channel images) for a single city.
         """
-        dates = raster_data['raster_date'].unique()
-        first_date = raster_data['raster_date'].min()
-        first_raster = raster_data.loc[raster_data['raster_date'] == first_date]
+        dates = raster_data['date'].unique()
+        first_date = dates.min()
+        first_raster = raster_data.loc[raster_data['date'] == first_date]
         combined_rasters = []
         for date in dates:
             if date == first_date:
                 continue
 
-            single_raster = raster_data.loc[raster_data['raster_date'] == date]
+            single_raster = raster_data.loc[raster_data['date'] == date]
             combined_raster = self._make_single_raster_pair_dataframe(first_raster, single_raster)
             del single_raster
             combined_rasters.append(combined_raster)
