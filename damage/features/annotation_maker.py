@@ -12,10 +12,7 @@ class AnnotationMaker(Feature):
         annotation_data = self._group_annotations_by_location_index(annotation_data)
         annotation_data = self._assign_patch_id_to_annotation(data['RasterSplitter'], annotation_data)
         annotation_data['destroyed'] = (annotation_data['damage_num'] == 3) * 1
-        # We drop nans on date because those are the images that come before
-        # any annotation, and cannot be used for training
-        #annotation_data = annotation_data.dropna(subset=['date']).drop('location_index', axis=1)
-        return annotation_data.set_index(['city', 'patch_id', 'date'])
+        return annotation_data.drop('location_index', axis=1).set_index(['city', 'patch_id', 'date'])
 
     @staticmethod
     def _combine_annotation_data(annotation_data):
