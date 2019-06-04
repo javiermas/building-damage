@@ -1,4 +1,5 @@
 from math import ceil
+from sklearn.utils import shuffle
 import random
 import numpy as np
 
@@ -15,9 +16,9 @@ class DataStream:
         test_patches = list(set(unique_patches) - set(train_patches))
         if self.class_proportion is not None:
             train_patches = self._upsample_class_proportion_in_patches(y, train_patches)
-
-        train_index = x.loc[x.index.get_level_values('patch_id').isin(train_patches)].index
-        test_index = x.loc[x.index.get_level_values('patch_id').isin(test_patches)].index
+        
+        train_index = shuffle(x.loc[x.index.get_level_values('patch_id').isin(train_patches)].index)
+        test_index = shuffle(x.loc[x.index.get_level_values('patch_id').isin(test_patches)].index)
         train_index_generator = self._get_train_index_generator(train_index)
         test_index_generator = self._get_test_index_generator(test_index)
         return train_index_generator, test_index_generator
