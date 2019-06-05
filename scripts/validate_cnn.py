@@ -4,6 +4,8 @@ import json
 from math import ceil
 from time import time
 import pandas as pd
+import tensorflow as tf
+from tensorflow.data import Dataset
 
 from damage.data import DataStream
 from damage.models import CNN, RandomSearch
@@ -20,7 +22,7 @@ FEATURES_PATH = 'logs/features'
 features_file_name = args.get('features')
 
 # Reading
-features = pd.read_pickle('{}/{}'.format(FEATURES_PATH, features_file_name))
+features = pd.read_pickle('{}/{}'.format(FEATURES_PATH, features_file_name)).dropna(subset=['destroyed'])
 #features_destroyed = features.loc[features['destroyed'] == 1].sample(1000)
 #features_non_destroyed = features.loc[features['destroyed'] == 0].sample(1000)
 #features = pd.concat([features_destroyed, features_non_destroyed])
@@ -28,26 +30,32 @@ features = pd.read_pickle('{}/{}'.format(FEATURES_PATH, features_file_name))
 #### Modelling
 sampler = RandomSearch()
 Model = CNN
-spaces = sampler.sample_cnn(10)
+spaces = sampler.sample_cnn(50)
+# Do splits
+class_proportion = {
+    1: 0.3,
+}
+batch_size = 250
+data_stream = DataStream(batch_size=batch_size, train_proportion=0.7, class_proportion=class_proportion)
+num_batches = ceil(len(features) / batch_size)
+train_index_generator, test_index_generator = data_stream.split_by_patch_id(features[['image']],
+                                                                            features[['destroyed']])
+train_generator = data_stream.get_train_data_generator_from_index(
+    [features['image'], features['destroyed']], train_index_generator)
+
+train_dataset = Dataset.from_generator(lambda: train_generator, (tf.float32, tf.int32))
+test_indices = list(test_index_generator)
+test_generator = data_stream.get_train_data_generator_from_index(
+    [features['image'], features['destroyed']], test_indices)
+test_dataset = Dataset.from_generator(lambda: test_generator, (tf.float32, tf.int32))
 for space in spaces:
-    class_proportion = {
-        1: 0.3,
-    }
-    data_stream = DataStream(batch_size=space['batch_size'], train_proportion=0.7, class_proportion=class_proportion)
-    num_batches = ceil(len(features) / space['batch_size'])
-    train_index_generator, test_index_generator = data_stream.split_by_patch_id(features['image'],
-                                                                                features['destroyed'])
-    train_generator = data_stream.get_data_generator_from_index(
-        [features['image'], features['destroyed']], train_index_generator)
-    test_indices = list(test_index_generator)
-    test_generator = data_stream.get_data_generator_from_index(
-        [features['image'], features['destroyed']], test_indices)
+    space['batch_size'] = batch_size
     space['class_weight'] = {
         0: (class_proportion[1] -.1),
         1: 1 - (class_proportion[1] -.1),
     }
     model = Model(**space)
-    losses = model.validate_generator(train_generator, test_generator,
+    losses = model.validate_generator(train_dataset, test_dataset,
                                       steps_per_epoch=num_batches,
                                       validation_steps=1,
                                       **space)
