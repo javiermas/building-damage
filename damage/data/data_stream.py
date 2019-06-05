@@ -1,7 +1,7 @@
 from math import ceil
-from sklearn.utils import shuffle
 import random
 import numpy as np
+import pandas as pd
 
 
 class DataStream:
@@ -11,14 +11,16 @@ class DataStream:
         self.class_proportion = class_proportion
 
     def split_by_patch_id(self, x, y):
-        unique_patches = x.index.get_level_values('patch_id').unique().tolist()
+        data = x.join(y)
+        unique_patches = data.index.get_level_values('patch_id').unique().tolist()
         train_patches = random.sample(unique_patches, round(len(unique_patches)*self.train_proportion))
-        test_patches = list(set(unique_patches) - set(train_patches))
+        train_data = data.loc[data.index.get_level_values('patch_id').isin(train_patches)]
         if self.class_proportion is not None:
-            train_patches = self._upsample_class_proportion_in_patches(y, train_patches)
-        
-        train_index = shuffle(x.loc[x.index.get_level_values('patch_id').isin(train_patches)].index)
-        test_index = shuffle(x.loc[x.index.get_level_values('patch_id').isin(test_patches)].index)
+            train_data = self._upsample_class_proportion(train_data).sample(frac=1)
+            train_index = train_data.index
+
+        test_patches = list(set(unique_patches) - set(train_patches))
+        test_index = data.loc[data.index.get_level_values('patch_id').isin(test_patches)].index
         train_index_generator = self._get_train_index_generator(train_index)
         test_index_generator = self._get_test_index_generator(test_index)
         return train_index_generator, test_index_generator
@@ -48,20 +50,10 @@ class DataStream:
             batch = np.stack(data.loc[_index]) 
             yield batch
 
-    def _upsample_class_proportion_in_patches(self, y, patches):
-        for level, proportion in self.class_proportion.items():
-            level_patches = y.loc[y == level].index.get_level_values('patch_id').unique().tolist()
-            if not level_patches:
-                raise ValueError('No patches found with class {}'.format(level))
-            level_patches_current = [patch for patch in level_patches if patch in patches]
-            proportion_current = len(level_patches_current)/len(patches)
-            if proportion_current > proportion:
-                raise NotImplementedError('Downsampling not implemented')
-
-            # This doesn't take into consideration that the total amount of patches
-            # will change, so we will not get the actual proportion
-            n_patches_to_add = round((proportion - proportion_current)*len(patches))
-            patches_to_add = [random.choice(level_patches_current) for _ in range(n_patches_to_add)]
-            patches += patches_to_add
-
-        return patches
+    def _upsample_class_proportion(self, data):
+        current_proportion = data['destroyed'].mean()
+        assert self.class_proportion[1] > current_proportion
+        sampling_proportion = {1: self.class_proportion[1]/current_proportion, 0: 1}
+        data_positives = data.loc[data['destroyed'] == 1].sample(frac=sampling_proportion[1]-1, replace=True)
+        data_resampled = pd.concat([data_positives, data]) 
+        return data_resampled
