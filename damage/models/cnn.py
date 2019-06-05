@@ -9,17 +9,15 @@ class CNN(Model):
 
     metrics = ['accuracy', precision, recall, negatives]
 
-    def __init__(self, convolutional_layers, dense_units=64, learning_rate=0.1,
-                 num_classes=2, loss_weights=None, **kwargs):
+    def __init__(self, convolutional_layers, dense_units=64, learning_rate=0.1, **kwargs):
         self.convolutional_layers = convolutional_layers
         self.dense_units = dense_units
         self.learning_rate = learning_rate
-        self.num_classes = num_classes
-        self.loss_weights = loss_weights
         self.model = self._create_model()
 
-    def fit_generator(self, generator, epochs, steps_per_epoch, **kwargs):
-        self.model.fit_generator(generator, epochs=epochs, steps_per_epoch=steps_per_epoch)
+    def fit_generator(self, generator, epochs, steps_per_epoch, class_weight=None, **kwargs):
+        self.model.fit_generator(generator, epochs=epochs, steps_per_epoch=steps_per_epoch,
+                                 class_weight=class_weight)
 
     def validate_generator(self, train_generator, test_generator, validation_steps,
                            epochs, steps_per_epoch, class_weight=None, **kwargs):
@@ -40,11 +38,11 @@ class CNN(Model):
             Flatten(),
             Dense(units=self.dense_units),
             BatchNormalization(),
-            Dense(units=1, activation='softmax'),
+            Dense(units=1, activation='relu'),
         ])
         model = Sequential(layers)
         model.compile(optimizer='adam', loss='binary_crossentropy', learning_rate=self.learning_rate,
-                      metrics=self.metrics, loss_weights=self.loss_weights)
+                      metrics=self.metrics)
         return model
 
     @staticmethod
