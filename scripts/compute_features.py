@@ -12,12 +12,12 @@ args = vars(parser.parse_args())
 STORING_PATH = 'logs/features'
 file_name = args.get('filename', None) or '{}.p'.format(str(round(time())))
 ## Reading
-cities = ['daraa']
+cities = ['aleppo']
 data = load_data_multiple_cities(cities)
 
 ### Processing
 grid_size = 0.035
-patch_size = 64*10
+patch_size = 64
 stride = patch_size
 pipeline = features.Pipeline(
     preprocessors=[
@@ -32,3 +32,4 @@ pipeline = features.Pipeline(
 )
 features = pipeline.transform(data)
 features.to_pickle('{}/{}'.format(STORING_PATH, file_name))
+print('Features stored in {}/{}'.format(STORING_PATH, file_name))
