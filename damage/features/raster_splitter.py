@@ -19,7 +19,6 @@ class RasterSplitter(Feature):
     def transform(self, data):
         raster_data = self._split_raster_data(data)
         annotation_data = {name: _data for name, _data in data.items() if 'annotation' in name}
-        #raster_data = self._assign_closest_previous_annotation_to_raster(annotation_data, raster_data)
         raster_data['location_index'] = geo_location_index(raster_data['latitude'], raster_data['longitude'],
                                                            grid_size=self.grid_size)
         return raster_data.set_index(['city', 'patch_id', 'date'])
@@ -62,7 +61,7 @@ class RasterSplitter(Feature):
         no_analysis_key = [key for key in data_dict if 'no_analysis' in key and city in key.lower()][0]
         no_analysis_areas = data_dict[no_analysis_key]
         no_analysis_areas_geometry = no_analysis_areas['geometry'].tolist()
-        no_analysis_areas_polygon = MultiPolygon().buffer(0)
+        no_analysis_areas_polygon = MultiPolygon(no_analysis_areas_geometry).buffer(0)
         # Populated areas
         populated_areas_key = [key for key in data_dict if 'populated' in key][0]
         populated_areas = data_dict[populated_areas_key]
