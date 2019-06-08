@@ -45,4 +45,5 @@ def save_as_pickled_object(obj, filepath):
             f_out.write(bytes_out[idx:idx+max_bytes])
 
 save_as_pickled_object(features, '{}/{}'.format(STORING_PATH, file_name))
+save_as_pickled_object(features['destroyed'], '{}/target_{}'.format(STORING_PATH, file_name))
 print('Features stored in {}/{}'.format(STORING_PATH, file_name))
