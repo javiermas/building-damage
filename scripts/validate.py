@@ -51,8 +51,8 @@ test_dataset = Dataset.from_generator(lambda: test_generator, (tf.float32, tf.in
 for space in spaces:
     space['batch_size'] = batch_size
     space['class_weight'] = {
-        0: (class_proportion[1] -.1),
-        1: 1 - (class_proportion[1] -.1),
+        0: (class_proportion[1] +.1),
+        1: 1 - (class_proportion[1] +.1),
     }
     model = Model(**space)
     losses = model.validate_generator(train_dataset, test_dataset,

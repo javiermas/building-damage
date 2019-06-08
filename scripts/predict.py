@@ -45,8 +45,8 @@ class_proportion = {
     1: 0.3,
 }
 space['class_weight'] = {
-    0: (class_proportion[1] -0.1),
-    1: 1 - (class_proportion[1] -0.1),
+    0: (class_proportion[1] +0.1),
+    1: 1 - (class_proportion[1] +0.1),
 }
 space['batch_size'] = 200
 space['epochs'] = 10
