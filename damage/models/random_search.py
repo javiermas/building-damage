@@ -10,22 +10,24 @@ class RandomSearch:
 
     @staticmethod
     def _sample_single_cnn_space():
-        num_layers = random.choice(range(1, 5))
+        num_layers = random.choice(range(3, 10))
         convolutional_layers = []
+        filters = random.choice([8, 16, 32, 64])
+        kernel_size = random.choice([3, 5, 7, 9])
+        pool_size = kernel_size-1
         for _ in range(num_layers):
-            kernel_size = random.choice(range(1, 15))
-            pool_size = min(kernel_size-1, random.choice(range(1, 10)))
+            filters = filters*2
             layer = {
                 'kernel_size': [kernel_size, kernel_size],
                 'pool_size': [pool_size, pool_size],
-                'filters': random.choice(range(10, 300)),
+                'filters': filters,
             }
             convolutional_layers.append(layer)
 
         space = {
-            'learning_rate': random.choice(np.geomspace(1e-2, 1)),
+            'learning_rate': random.choice(np.geomspace(1e-3, 1)),
             'batch_size': random.choice(range(100, 300)),
             'convolutional_layers': convolutional_layers,
-            'epochs': random.choice(range(5, 15)),
+            'epochs': random.choice(range(5, 25)),
         }
         return space
