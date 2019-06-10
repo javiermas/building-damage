@@ -6,13 +6,18 @@ from damage.features.base import Feature
 
 class AnnotationMaker(Feature):
 
+    def __init__(self, patch_size):
+        super().__init__()
+        self.patch_size = patch_size
+
     def transform(self, data):
         annotation_data = {key: value for key, value in data.items() if 'annotation' in key}
         annotation_data = self._combine_annotation_data(annotation_data)
-        annotation_data = self._group_annotations_by_location_index(annotation_data)
-        annotation_data = self._assign_patch_id_to_annotation(data['RasterSplitter'], annotation_data)
+        annotation_data = self._assign_patch_id_to_annotation(annotation_data, data)
+        annotation_data = self._group_annotations_by_patch_id(annotation_data)
+        annotation_data = self._combine_annotations_with_raster_dates(annotation_data, data['RasterSplitter'])
         annotation_data['destroyed'] = (annotation_data['damage_num'] == 3) * 1
-        return annotation_data.drop('location_index', axis=1).set_index(['city', 'patch_id', 'date'])
+        return annotation_data.set_index(['city', 'patch_id', 'date'])
 
     @staticmethod
     def _combine_annotation_data(annotation_data):
@@ -27,7 +32,30 @@ class AnnotationMaker(Feature):
     def _group_annotations_by_location_index(annotation_data):
         return annotation_data.groupby(['city', 'location_index', 'date'])['damage_num'].max()
 
-    def _assign_patch_id_to_annotation(self, raster_data, annotation_data):
+    @staticmethod
+    def _group_annotations_by_patch_id(annotation_data):
+        return annotation_data.groupby(['city', 'patch_id', 'date'])['damage_num'].max()
+
+    def _assign_patch_id_to_annotation(self, annotation_data, data):
+        annotation_data_with_patch_id = []
+        for city in annotation_data['city'].unique():
+            raster_key_single_city = [key for key in data.keys() if 'raster' in key and city in key][0]
+            raster_data_single_city = data[raster_key_single_city]
+            annotation_data_single_city = annotation_data.loc[annotation_data['city'] == city]
+            rows, cols = raster_data_single_city.index(
+                annotation_data_single_city['longitude'],
+                annotation_data_single_city['latitude']
+            )
+            rows_centroids = [int(self.patch_size * (r//self.patch_size) + (self.patch_size/2)) for r in rows]
+            cols_centroids = [int(self.patch_size * (c//self.patch_size) + (self.patch_size/2)) for c in cols]
+            patch_ids = [f'{c}-{r}' for r, c in zip(rows_centroids, cols_centroids)]
+            annotation_data_single_city['patch_id'] = patch_ids
+            annotation_data_with_patch_id.append(annotation_data_single_city)
+
+        annotation_data_with_patch_id = pd.concat(annotation_data_with_patch_id)
+        return annotation_data_with_patch_id
+
+    def _combine_annotations_with_raster_dates(self, annotation_data, raster_data):
         annotation_dates = annotation_data.index.get_level_values('date').unique().tolist()
         cities = raster_data.index.get_level_values('city').unique()
         date_mappings = []
@@ -44,7 +72,7 @@ class AnnotationMaker(Feature):
                 }
                 date_mappings.append(date_mapping)
 
-        raster_dates = pd.DataFrame(date_mappings) 
+        raster_dates = pd.DataFrame(date_mappings)
         raster_dates_with_annotation_data = self._get_raster_dates_with_annotation_data(
             raster_dates,
             annotation_data.reset_index()
@@ -55,13 +83,12 @@ class AnnotationMaker(Feature):
         annotations_long_gap, annotations_short_gap = annotations_by_gap
         # Pandas seems to have a bug that changes the dtype of
         # a date column to datetime automatically when assigning to index
-        raster_data_no_index = raster_data.reset_index()
-        raster_locations_no_index = raster_data_no_index[['city', 'patch_id', 'location_index', 'date']]
-        raster_locations_no_index['date'] = raster_locations_no_index['date'].dt.date
+        raster_index = pd.DataFrame(raster_data.index.tolist(), columns=raster_data.index.names)
+        raster_index['date'] = raster_index['date'].dt.date
         annotation_data = self._combine_long_and_short_gap_annotations_with_raster_data(
             annotations_long_gap,
             annotations_short_gap,
-            raster_locations_no_index
+            raster_index,
         )
         return annotation_data
 
@@ -103,11 +130,11 @@ class AnnotationMaker(Feature):
         raster_long_gap = raster_data.loc[raster_data['date'].isin(annotations_long_gap['date'].unique())]
         # We take all raster data from the short gap ones, so we can fill it with 0 (no destruction).
         annotations_short_gap = pd.merge(raster_short_gap, annotations_short_gap,
-                                         on=['city', 'location_index', 'date'], how='left')
+                                         on=['city', 'patch_id', 'date'], how='left')
         # We take only raster data from the long gap that matches with the annotations,
         # so we only keep the destroyed ones gap ones.
         annotations_long_gap = pd.merge(raster_long_gap, annotations_long_gap,
-                                         on=['city', 'location_index', 'date'], how='inner')
+                                         on=['city', 'patch_id', 'date'], how='inner')
         annotation_data = pd.concat([annotations_short_gap, annotations_long_gap], sort=False)
         # If there's no annotation, we assume it is not destroyed
         annotation_data['damage_num'] = annotation_data['damage_num'].fillna(0)
