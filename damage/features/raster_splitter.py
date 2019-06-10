@@ -1,10 +1,9 @@
-from datetime import date, timedelta
+from datetime import date
 import pandas as pd
 import numpy as np
 from tqdm import tqdm
 from shapely.geometry import MultiPolygon, Point
 
-from damage.utils import geo_location_index
 from damage.features.base import Feature
 
 
@@ -18,16 +17,13 @@ class RasterSplitter(Feature):
 
     def transform(self, data):
         raster_data = self._split_raster_data(data)
-        annotation_data = {name: _data for name, _data in data.items() if 'annotation' in name}
-        raster_data['location_index'] = geo_location_index(raster_data['latitude'], raster_data['longitude'],
-                                                           grid_size=self.grid_size)
         return raster_data.set_index(['city', 'patch_id', 'date'])
 
     def _split_raster_data(self, data):
         rasters = [(key, value) for key, value in data.items() if 'raster' in key]
         tiles = []
         for name, raster in rasters:
-            array = self._raster_to_array(raster)#.astype(float)
+            array = self._raster_to_array(raster)
             city, year, month, day = self.parse_raster_filename(name)
             polygons = self._get_polygons_from_data_dict_single_city(data, city)
             no_analysis_areas_polygon, populated_areas_polygon = polygons
@@ -49,8 +45,6 @@ class RasterSplitter(Feature):
                         'patch_id': '{}-{}'.format(w, h),
                     }
                     tiles.append(tile)
-
-            data.pop(name) # Hack to avoid memory problems
 
         tiles = pd.DataFrame(tiles)
         return tiles
