@@ -14,7 +14,7 @@ class AnnotationPreprocessor(Preprocessor):
         for key, value in data.items():
             if 'annotation' not in key:
                 continue
-		
+
             value = self._add_latitude_and_longitude(value)
             value['location_index'] = geo_location_index(value['latitude'], value['longitude'], self.grid_size)
             value = value.rename({'StlmtNme': 'city'}, axis=1)
@@ -48,12 +48,12 @@ class AnnotationPreprocessor(Preprocessor):
             lambda x: x['SensDt_{}'.format(x['variable'][-1])] if '_' in x['variable'] else x['SensDt'], axis=1)
         date_column = pd.to_datetime(date_column).dt.date
         return date_column
-    
+
     @staticmethod
     def _get_damage_numerical(damage_data):
         mapping = {'No Visible Damage': 0, 'Moderate Damage': 1, 'Severe Damage': 2, 'Destroyed': 3}
         return damage_data.map(mapping)
-    
+
     @staticmethod
     def _crop_annotation_to_longitude_and_latitude(annotation_data, longitude, latitude):
         mask_longitude = annotation_data['longitude'] >= longitude[0]\
