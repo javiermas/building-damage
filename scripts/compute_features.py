@@ -27,7 +27,7 @@ pipeline = features.Pipeline(
     ],
     features=[
         ('RasterSplitter', features.RasterSplitter(patch_size=patch_size, stride=stride, grid_size=grid_size)),
-        ('AnnotationMaker', features.AnnotationMaker()),
+        ('AnnotationMaker', features.AnnotationMaker(patch_size=patch_size)),
         ('RasterPairMaker', features.RasterPairMaker()),
     ],
 
