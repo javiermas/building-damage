@@ -11,6 +11,7 @@ class RandomSearch:
     @staticmethod
     def _sample_single_cnn_space():
         num_layers = random.choice(range(3, 5))
+        layer_type = random.choice(['cnn', 'vgg'])
         convolutional_layers = []
         filters = random.choice([8, 16, 32])
         kernel_size = random.choice([3, 5, 7, 9])
