@@ -48,8 +48,6 @@ space['class_weight'] = {
     0: (class_proportion[1] +0.1),
     1: 1 - (class_proportion[1] +0.1),
 }
-space['batch_size'] = 200
-space['epochs'] = 10
 # Get data generators
 data_stream = DataStream(batch_size=space['batch_size'], train_proportion=0.7,
                          class_proportion=class_proportion)
@@ -63,6 +61,8 @@ test_generator = data_stream.get_test_data_generator_from_index(features['image'
 num_batches = ceil(len(features) / space['batch_size'])
 # Fit model and predict
 train_dataset = Dataset.from_generator(lambda: train_generator, (tf.float32, tf.int32))
+print('Training with space: \n')
+print(space)
 model = Model(**space)
 model.fit_generator(train_dataset,
                     steps_per_epoch=num_batches,
