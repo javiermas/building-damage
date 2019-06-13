@@ -6,12 +6,13 @@ def recall(y_true, y_pred):
     possible_positives = K.sum(K.round(K.clip(y_true, 0, 1)))
     return true_positives_computed / (possible_positives + K.epsilon())
 
+
 def positives(y_true, y_pred):
     return K.sum(y_true)
 
 
 def negatives(y_true, y_pred):
-    return K.mean(1 - y_true)
+    return K.sum(1 - y_true)
 
 
 def true_positives(y_true, y_pred):
@@ -55,3 +56,10 @@ def specificity(y_true, y_pred):
     true_negatives = K.sum(K.round(K.clip((1-y_true) * (1-y_pred), 0, 1)))
     possible_negatives = K.sum(K.round(K.clip(1-y_true, 0, 1)))
     return true_negatives / (possible_negatives + K.epsilon())
+
+
+def sensitivity_specificity_average(y_true, y_pred):
+    _sensitivity = sensitivity(y_true, y_pred)
+    _specificity = specificity(y_true, y_pred)
+    return 2*((_sensitivity*_specificity)/(_sensitivity+_specificity+K.epsilon()))
+    
