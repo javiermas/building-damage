@@ -1,4 +1,4 @@
-from tensorflow.keras.layers import Conv2D, MaxPooling2D, Dense, Flatten, BatchNormalization
+from tensorflow.keras.layers import Conv2D, MaxPooling2D, Dense, Flatten, BatchNormalization, Dropout
 from tensorflow.keras.models import Sequential
 
 from damage.models.losses import *
@@ -7,7 +7,8 @@ from damage.models.base import Model
 
 class CNN(Model):
 
-    metrics = ['accuracy', recall, specificity, precision, negatives]
+    metrics = ['accuracy', recall, specificity, precision, negatives,
+               positives, sensitivity_specificity_average]
 
     def __init__(self, convolutional_layers, dense_units=64, learning_rate=0.1, **kwargs):
         self.convolutional_layers = convolutional_layers
@@ -32,7 +33,7 @@ class CNN(Model):
     def _create_model(self):
         layers = []
         for config in self.convolutional_layers:
-            layers.append(self._create_convolutional_and_pooling_layer(**config))
+            layers.extend(self._create_convolutional_and_pooling_layer(**config))
 
         layers.extend([
             Flatten(),
@@ -46,7 +47,8 @@ class CNN(Model):
         return model
 
     @staticmethod
-    def _create_convolutional_and_pooling_layer(filters, kernel_size, pool_size):
+    def _create_convolutional_and_pooling_layer(filters, kernel_size, pool_size, dropout=0):
         conv = Conv2D(filters=filters, kernel_size=kernel_size, padding="same", activation='relu')
         pool = MaxPooling2D(pool_size=pool_size, strides=1)
-        return pool
+        dropout = Dropout(dropout)
+        return [conv, pool, dropout]
