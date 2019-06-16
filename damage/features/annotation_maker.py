@@ -48,7 +48,7 @@ class AnnotationMaker(Feature):
             )
             rows_centroids = [int(self.patch_size * (r//self.patch_size) + (self.patch_size/2)) for r in rows]
             cols_centroids = [int(self.patch_size * (c//self.patch_size) + (self.patch_size/2)) for c in cols]
-            patch_ids = [f'{c}-{r}' for r, c in zip(rows_centroids, cols_centroids)]
+            patch_ids = ['{}-{}'.format(c, r) for r, c in zip(rows_centroids, cols_centroids)]
             annotation_data_single_city['patch_id'] = patch_ids
             annotation_data_with_patch_id.append(annotation_data_single_city)
 
