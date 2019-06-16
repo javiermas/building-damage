@@ -6,17 +6,12 @@ from damage.features.base import Preprocessor
 
 class AnnotationPreprocessor(Preprocessor):
 
-    def __init__(self, grid_size=0.035):
-        super().__init__()
-        self.grid_size = grid_size
-
     def transform(self, data):
         for key, value in data.items():
             if 'annotation' not in key:
                 continue
 
             value = self._add_latitude_and_longitude(value)
-            value['location_index'] = geo_location_index(value['latitude'], value['longitude'], self.grid_size)
             value = value.rename({'StlmtNme': 'city'}, axis=1)
             value['city'] = value['city'].str.lower()
             value = self._unpivot_annotation(value)
