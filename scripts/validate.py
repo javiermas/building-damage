@@ -8,7 +8,8 @@ import tensorflow as tf
 from tensorflow.data import Dataset
 
 from damage.data import DataStream
-from damage.models import CNN, RandomSearch
+from damage.models import CNN, RandomSearch, CNNPreTrained
+
 
 parser = argparse.ArgumentParser()
 parser.add_argument('features')
@@ -29,8 +30,13 @@ features = pd.read_pickle('{}/{}'.format(FEATURES_PATH, features_file_name)).dro
 
 #### Modelling
 sampler = RandomSearch()
-Model = CNN
-spaces = sampler.sample_cnn(50)
+models = {
+    CNN: sampler.sample_cnn,
+    CNNPreTrained: sampler.sample_cnn_pretrained,
+}
+Model = CNNPreTrained
+sample_func = models[Model]
+spaces = sample_func(50)
 # Do splits
 class_proportion = {
     1: 0.3,
@@ -40,7 +46,6 @@ test_batch_size = 500
 train_proportion = 0.7
 data_stream = DataStream(batch_size=batch_size, train_proportion=train_proportion,
                          class_proportion=class_proportion, test_batch_size=test_batch_size)
-num_batches = ceil(len(features) / batch_size)
 train_index_generator, test_index_generator = data_stream.split_by_patch_id(features[['image']],
                                                                             features[['destroyed']])
 train_generator = data_stream.get_train_data_generator_from_index(
@@ -48,10 +53,13 @@ train_generator = data_stream.get_train_data_generator_from_index(
 
 train_dataset = Dataset.from_generator(lambda: train_generator, (tf.float32, tf.int32))
 test_indices = list(test_index_generator)
+num_batches = ceil(len(features) / batch_size)
 num_batches_test = len(test_indices)
 test_generator = data_stream.get_train_data_generator_from_index(
     [features['image'], features['destroyed']], test_indices)
 test_dataset = Dataset.from_generator(lambda: test_generator, (tf.float32, tf.int32))
+num_batches = ceil(len(features) / batch_size)
+num_batches_test = ceil(len(test_indices)/test_batch_size)
 for space in spaces:
     space['batch_size'] = batch_size
     space['class_weight'] = {

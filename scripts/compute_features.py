@@ -18,15 +18,14 @@ cities = ['aleppo']
 data = load_data_multiple_cities(cities)
 
 ### Processing
-grid_size = 0.035
-patch_size = 64
+patch_size = 128
 stride = patch_size
 pipeline = features.Pipeline(
     preprocessors=[
-        ('AnnotationPreprocessor', features.AnnotationPreprocessor(grid_size=grid_size)),
+        ('AnnotationPreprocessor', features.AnnotationPreprocessor()),
     ],
     features=[
-        ('RasterSplitter', features.RasterSplitter(patch_size=patch_size, stride=stride, grid_size=grid_size)),
+        ('RasterSplitter', features.RasterSplitter(patch_size=patch_size, stride=stride)),
         ('AnnotationMaker', features.AnnotationMaker(patch_size=patch_size)),
         ('RasterPairMaker', features.RasterPairMaker()),
     ],
