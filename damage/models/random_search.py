@@ -8,6 +8,10 @@ class RandomSearch:
         spaces = [self._sample_single_cnn_space() for _ in range(T)]
         return spaces
 
+    def sample_cnn_pretrained(self, T):
+        spaces = [self._sample_single_cnn_pretrained_space() for _ in range(T)]
+        return spaces
+
     @staticmethod
     def _sample_single_cnn_space():
         num_layers = random.choice(range(2, 7))
@@ -39,4 +43,14 @@ class RandomSearch:
         if total_filters > 1800:
             space = RandomSearch._sample_single_cnn_space()
 
+        return space
+
+    @staticmethod
+    def _sample_single_cnn_pretrained_space():
+        space = {
+            'dense_units': random.choice([16, 32, 64, 128, 256]),
+            'learning_rate': random.choice(np.geomspace(1e-3, 1)),
+            'batch_size': random.choice(range(50, 100)),
+            'epochs': random.choice(range(5, 15)),
+        }
         return space

@@ -9,11 +9,10 @@ from damage.features.base import Feature
 
 class RasterSplitter(Feature):
 
-    def __init__(self, patch_size, stride, grid_size=0.035):
+    def __init__(self, patch_size, stride):
         super().__init__()
         self.patch_size = patch_size
         self.stride = stride
-        self.grid_size = grid_size
 
     def transform(self, data):
         raster_data = self._split_raster_data(data)
