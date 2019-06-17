@@ -37,10 +37,10 @@ class_proportion = {
 }
 batch_size = spaces[0]['batch_size']
 test_batch_size = 500
-data_stream = DataStream(batch_size=batch_size, train_proportion=0.7,
+train_proportion = 0.7
+data_stream = DataStream(batch_size=batch_size, train_proportion=train_proportion,
                          class_proportion=class_proportion, test_batch_size=test_batch_size)
 num_batches = ceil(len(features) / batch_size)
-num_batches_test = ceil(len(test_indices)/test_batch_size)
 train_index_generator, test_index_generator = data_stream.split_by_patch_id(features[['image']],
                                                                             features[['destroyed']])
 train_generator = data_stream.get_train_data_generator_from_index(
@@ -48,6 +48,7 @@ train_generator = data_stream.get_train_data_generator_from_index(
 
 train_dataset = Dataset.from_generator(lambda: train_generator, (tf.float32, tf.int32))
 test_indices = list(test_index_generator)
+num_batches_test = len(test_indices)
 test_generator = data_stream.get_train_data_generator_from_index(
     [features['image'], features['destroyed']], test_indices)
 test_dataset = Dataset.from_generator(lambda: test_generator, (tf.float32, tf.int32))
