@@ -24,11 +24,11 @@ features_file_name = args.get('features')
 
 # Reading
 features = pd.read_pickle('{}/{}'.format(FEATURES_PATH, features_file_name)).dropna(subset=['destroyed'])
-#features_destroyed = features.loc[features['destroyed'] == 1].sample(300)
-#features_non_destroyed = features.loc[features['destroyed'] == 0].sample(1000)
+#features_destroyed = features.loc[features['destroyed'] == 1].sample(500)
+#features_non_destroyed = features.loc[features['destroyed'] == 0].sample(5000)
 #features = pd.concat([features_destroyed, features_non_destroyed])
 
-#### Modelling
+# Modelling
 Model = CNN
 
 # Choose space
@@ -42,18 +42,15 @@ else:
     space = RandomSearch._sample_single_cnn_space()
 
 
-space['epochs'] = min(space['epochs'], 10)
+space['epochs'] = min(space['epochs'], 5)
 class_proportion = {
     1: 0.3,
 }
-space['class_weight'] = {
-    0: (class_proportion[1] +0.1),
-    1: 1 - (class_proportion[1] +0.1),
-}
 # Get data generators
 test_batch_size = 500
+train_proportion = 0.7
 data_stream = DataStream(batch_size=space['batch_size'], test_batch_size=test_batch_size, 
-                         train_proportion=0.7, class_proportion=class_proportion)
+                         train_proportion=train_proportion, class_proportion=class_proportion)
 train_index_generator, test_index_generator = data_stream.split_by_patch_id(features[['image']], features[['destroyed']])
 train_generator = data_stream.get_train_data_generator_from_index([features['image'], features['destroyed']],
                                                             train_index_generator)
@@ -62,7 +59,7 @@ test_indices = list(test_index_generator)
 test_generator = data_stream.get_test_data_generator_from_index(features['image'], test_indices)
 
 num_batches = ceil(len(features) / space['batch_size'])
-num_batches_test = ceil(len(test_indices) / test_batch_size)
+num_batches_test = len(test_indices)
 # Fit model and predict
 train_dataset = Dataset.from_generator(lambda: train_generator, (tf.float32, tf.int32))
 print('Training with space: \n')
