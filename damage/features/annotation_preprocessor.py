@@ -10,16 +10,17 @@ class AnnotationPreprocessor(Preprocessor):
         for key, value in data.items():
             if 'annotation' not in key:
                 continue
+            if 'Aleppo' in key:
+                value = self.apply_aleppo_hacks(value)
 
             value = self._add_latitude_and_longitude(value)
             value = value.rename({'StlmtNme': 'city'}, axis=1)
             value['city'] = value['city'].str.lower()
-            assert len(value['city'].unique()) == 1 
+            assert value['city'].nunique() == 1 
             city = value['city'].unique()[0]
             raster_key = [key for key in data.keys() if 'raster' in key and city in key][0]
             width, height = data[raster_key].width, data[raster_key].height 
             value['row'], value['column'] = data[raster_key].index(value['longitude'], value['latitude']) 
-            import ipdb; ipdb.set_trace()
             value = self._crop_annotation_to_image_dimensions(value, {'height': height, 'width': width})
             value = self._unpivot_annotation(value)
             value['damage_num'] = self._get_damage_numerical(value['damage'])
@@ -63,3 +64,13 @@ class AnnotationPreprocessor(Preprocessor):
             & (annotation_data['column'] < dimensions['width'])\
             & (annotation_data['column'] >= 0)
         return annotation_data.loc[mask]
+
+    @staticmethod
+    def apply_aleppo_hacks(annotation_data):
+        """One annotation date has two dates. One of the dates
+        (2015-05-01) only appears 11 times. If left as it is
+        they will be considered different annotations and
+        rasters will be matched with the date with few annotations.
+        """
+        annotation_data['SensDt_3'] = annotation_data['SensDt_3'].apply(lambda x: '2015-04-26' if x == '2015-05-01' else x)
+        return annotation_data
