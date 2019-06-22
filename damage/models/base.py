@@ -33,16 +33,18 @@ class CNNModel(ABC):
         return self.model.predict_generator(generator, **kwargs)
 
     @staticmethod
-    def _create_convolutional_and_pooling_layer_vgg(filters, kernel_size, pool_size, dropout=0):
-        conv_0 = Conv2D(filters=filters, kernel_size=kernel_size, padding="same", activation='relu')
-        conv_1 = Conv2D(filters=filters, kernel_size=kernel_size, padding="same", activation='relu')
+    def _create_convolutional_and_pooling_layer_vgg(filters, kernel_size, pool_size, dropout,
+                                                    activation='relu'):
+        conv_0 = Conv2D(filters=filters, kernel_size=kernel_size, padding="same", activation=activation)
+        conv_1 = Conv2D(filters=filters, kernel_size=kernel_size, padding="same", activation=activation)
         pool = MaxPooling2D(pool_size=pool_size, strides=1)
         dropout = Dropout(dropout)
         return [conv_0, conv_1, pool, dropout]
 
     @staticmethod
-    def _create_convolutional_and_pooling_layer_cnn(filters, kernel_size, pool_size, dropout=0):
-        conv = Conv2D(filters=filters, kernel_size=kernel_size, padding="same", activation='relu')
+    def _create_convolutional_and_pooling_layer_cnn(filters, kernel_size, pool_size, dropout,
+                                                    activation='relu'):
+        conv = Conv2D(filters=filters, kernel_size=kernel_size, padding="same", activation=activation)
         pool = MaxPooling2D(pool_size=pool_size, strides=1)
         dropout = Dropout(dropout)
         return [conv, pool, dropout]
