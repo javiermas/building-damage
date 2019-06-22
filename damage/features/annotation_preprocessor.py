@@ -14,6 +14,13 @@ class AnnotationPreprocessor(Preprocessor):
             value = self._add_latitude_and_longitude(value)
             value = value.rename({'StlmtNme': 'city'}, axis=1)
             value['city'] = value['city'].str.lower()
+            assert len(value['city'].unique()) == 1 
+            city = value['city'].unique()[0]
+            raster_key = [key for key in data.keys() if 'raster' in key and city in key][0]
+            width, height = data[raster_key].width, data[raster_key].height 
+            value['row'], value['column'] = data[raster_key].index(value['longitude'], value['latitude']) 
+            import ipdb; ipdb.set_trace()
+            value = self._crop_annotation_to_image_dimensions(value, {'height': height, 'width': width})
             value = self._unpivot_annotation(value)
             value['damage_num'] = self._get_damage_numerical(value['damage'])
             data[key] = value
@@ -50,9 +57,9 @@ class AnnotationPreprocessor(Preprocessor):
         return damage_data.map(mapping)
 
     @staticmethod
-    def _crop_annotation_to_longitude_and_latitude(annotation_data, longitude, latitude):
-        mask_longitude = annotation_data['longitude'] >= longitude[0]\
-            & annotation_data['longitude'] < longitude[1]
-        mask_latitude = annotation_data['latitude'] >= latitude[0]\
-            & annotation_data['latitude'] < latitude[1]
-        return annotation_data.loc[mask_longitude & mask_latitude]
+    def _crop_annotation_to_image_dimensions(annotation_data, dimensions):
+        mask = (annotation_data['row'] < dimensions['height'])\
+            & (annotation_data['row'] >= 0)\
+            & (annotation_data['column'] < dimensions['width'])\
+            & (annotation_data['column'] >= 0)
+        return annotation_data.loc[mask]
