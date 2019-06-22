@@ -17,30 +17,30 @@ def save_as_pickled_object(obj, filepath):
         for idx in range(0, n_bytes, max_bytes):
             f_out.write(bytes_out[idx:idx+max_bytes])
 
-
 parser = argparse.ArgumentParser()
 parser.add_argument('--filename')
 args = vars(parser.parse_args())
-
-STORING_PATH = 'logs/features'
 file_name = args.get('filename', None) or '{}.p'.format(str(round(time())))
-## Reading
-cities = ['aleppo']
-data = load_data_multiple_cities(cities)
 
-### Processing
-patch_size = 128
-stride = patch_size
+# Constants
+STORING_PATH = 'logs/features'
+CITIES = ['aleppo']
+PATCH_SIZE = 128
+STRIDE = PATCH_SIZE  # dont change
+
+# Reading
+data = load_data_multiple_cities(CITIES)
+
+# Processing
 pipeline = features.Pipeline(
     preprocessors=[
         ('AnnotationPreprocessor', features.AnnotationPreprocessor()),
     ],
     features=[
-        ('RasterSplitter', features.RasterSplitter(patch_size=patch_size, stride=stride)),
-        ('AnnotationMaker', features.AnnotationMaker(patch_size=patch_size)),
+        ('RasterSplitter', features.RasterSplitter(patch_size=PATCH_SIZE, stride=STRIDE)),
+        ('AnnotationMaker', features.AnnotationMaker(patch_size=PATCH_SIZE)),
         ('RasterPairMaker', features.RasterPairMaker()),
     ],
-
 )
 features = pipeline.transform(data)
 save_as_pickled_object(features, '{}/{}'.format(STORING_PATH, file_name))
