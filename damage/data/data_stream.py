@@ -18,42 +18,44 @@ class DataStream:
         train_patches = random.sample(unique_patches, round(len(unique_patches)*self.train_proportion))
         train_data = data.loc[data.index.get_level_values('patch_id').isin(train_patches)]
         if self.class_proportion is not None:
-            train_data = self._upsample_class_proportion(train_data).sample(frac=1)
+            train_data = self._upsample_class_proportion(train_data, self.class_proportion).sample(frac=1)
 
         test_patches = list(set(unique_patches) - set(train_patches))
         test_data = data.loc[data.index.get_level_values('patch_id').isin(test_patches)]
         train_index_generator = self._get_index_generator(train_data, self.batch_size)
         test_index_generator = self._get_index_generator(test_data, self.test_batch_size)
         return train_index_generator, test_index_generator
-
-    def _get_index_generator(self, features, batch_size):
+    
+    @staticmethod
+    def _get_index_generator(features, batch_size, Splitter=StratifiedKFold):
         num_batches = ceil(len(features) / batch_size)
-        stratified_k_fold = StratifiedKFold(n_splits=num_batches)
-        batches = stratified_k_fold.split(features['destroyed'], features['destroyed'])
-        batches = [features.iloc[batch[1]].index for batch in batches]
+        splitter = Splitter(n_splits=num_batches)
+        batches = splitter.split(features['destroyed'], features['destroyed'])
+        batches = list(map(lambda x: x[1], batches))
         return batches
 
     @staticmethod
     def get_train_data_generator_from_index(data, index):
         while True:
             for _index in index:
-                batch = tuple([np.stack(dataframe.loc[_index]) for dataframe in data])
+                batch = tuple([np.stack(dataframe.iloc[_index]) for dataframe in data])
                 yield batch
 
     @staticmethod
     def get_test_data_generator_from_index(data, index):
         while True:
             for _index in index:
-                batch = np.stack(data.loc[_index]) 
+                batch = np.stack(data.iloc[_index]) 
                 yield batch
-
-    def _upsample_class_proportion(self, data):
+    
+    @staticmethod
+    def _upsample_class_proportion(data, proportion):
         current_proportion = data['destroyed'].mean()
-        assert self.class_proportion[1] > current_proportion
+        assert proportion[1] > current_proportion
         data_non_destroyed = data.loc[data['destroyed'] == 0]
         data_destroyed = data.loc[data['destroyed'] == 1]
         data_destroyed_upsampled = data_destroyed.sample(
-            int(len(data_non_destroyed)*self.class_proportion[1]),
+            int(len(data_non_destroyed)*proportion[1]),
             replace=True
         )
         data_resampled = pd.concat([data_non_destroyed, data_destroyed_upsampled])
