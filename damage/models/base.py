@@ -32,6 +32,9 @@ class CNNModel(ABC):
     def predict_generator(self, generator, **kwargs):
         return self.model.predict_generator(generator, **kwargs)
 
+    def save(self, path, *args, **kwargs):
+        self.model.save(path, *args, **kwargs)
+
     @staticmethod
     def _create_convolutional_and_pooling_layer_vgg(filters, kernel_size, pool_size, dropout,
                                                     activation='relu'):
