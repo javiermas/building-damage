@@ -25,7 +25,7 @@ file_name = args.get('filename', None) or '{}.p'.format(str(round(time())))
 # Constants
 STORING_PATH = 'logs/features'
 CITIES = ['aleppo']
-PATCH_SIZE = 128
+PATCH_SIZE = 64
 STRIDE = PATCH_SIZE  # dont change
 
 # Reading
@@ -44,5 +44,6 @@ pipeline = features.Pipeline(
 )
 features = pipeline.transform(data)
 save_as_pickled_object(features, '{}/{}'.format(STORING_PATH, file_name))
-save_as_pickled_object(features['destroyed'], '{}/target_{}'.format(STORING_PATH, file_name))
+save_as_pickled_object(features[['destroyed', 'latitude', 'longitude']],
+                       '{}/target_{}'.format(STORING_PATH, file_name))
 print('Features stored in {}/{}'.format(STORING_PATH, file_name))
