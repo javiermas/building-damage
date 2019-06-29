@@ -1,4 +1,5 @@
 import os
+import random
 import argparse
 import json
 from math import ceil
@@ -6,6 +7,7 @@ from time import time
 import pandas as pd
 import tensorflow as tf
 from tensorflow.data import Dataset
+from tensorflow.errors import ResourceExhaustedError
 
 from damage.data import DataStream
 from damage.models import CNN, RandomSearch, CNNPreTrained
@@ -34,9 +36,9 @@ models = {
     CNN: sampler.sample_cnn,
     CNNPreTrained: sampler.sample_cnn_pretrained,
 }
-Model = CNNPreTrained
+Model = random.choice([CNN])
 sample_func = models[Model]
-spaces = sample_func(50)
+spaces = sample_func(500)
 # Do splits
 class_proportion = {
     1: 0.3,
@@ -46,37 +48,51 @@ test_batch_size = 500
 train_proportion = 0.7
 data_stream = DataStream(batch_size=batch_size, train_proportion=train_proportion,
                          class_proportion=class_proportion, test_batch_size=test_batch_size)
-train_index_generator, test_index_generator = data_stream.split_by_patch_id(features[['image']],
-                                                                            features[['destroyed']])
-train_generator = data_stream.get_train_data_generator_from_index(
-    [features['image'], features['destroyed']], train_index_generator)
 
-train_dataset = Dataset.from_generator(lambda: train_generator, (tf.float32, tf.int32))
-test_indices = list(test_index_generator)
-num_batches = ceil(len(features) / batch_size)
-num_batches_test = len(test_indices)
+unique_patches = features.index.get_level_values('patch_id').unique().tolist()
+train_patches = random.sample(unique_patches, round(len(unique_patches)*train_proportion))
+train_data = features.loc[features.index.get_level_values('patch_id').isin(train_patches)]
+train_data_upsampled = data_stream._upsample_class_proportion(train_data, class_proportion).sample(frac=1)
+test_patches = list(set(unique_patches) - set(train_patches))
+test_data = features.loc[features.index.get_level_values('patch_id').isin(test_patches)]
+
+train_indices = data_stream._get_index_generator(train_data_upsampled, batch_size)
+test_indices = data_stream._get_index_generator(test_data, test_batch_size)
+train_generator = data_stream.get_train_data_generator_from_index(
+    [train_data_upsampled['image'], train_data_upsampled['destroyed']], train_indices)
 test_generator = data_stream.get_train_data_generator_from_index(
-    [features['image'], features['destroyed']], test_indices)
+    [test_data['image'], test_data['destroyed']], test_indices)
+train_dataset = Dataset.from_generator(lambda: train_generator, (tf.float32, tf.int32))
 test_dataset = Dataset.from_generator(lambda: test_generator, (tf.float32, tf.int32))
-num_batches = ceil(len(features) / batch_size)
-num_batches_test = ceil(len(test_indices)/test_batch_size)
+
+num_batches = len(train_indices)
+num_batches_test = len(test_indices)
+#Validate
 for space in spaces:
     space['batch_size'] = batch_size
     space['class_weight'] = {
-        0: (class_proportion[1] +.1),
-        1: 1 - (class_proportion[1] +.1),
+        0: (class_proportion[1] * space['class_weight']),
+        1: 1 - (class_proportion[1] * space['class_weight']),
     }
     print('Now validating:\n')
     print(space)
-    model = Model(**space)
-    losses = model.validate_generator(train_dataset, test_dataset,
-                                      steps_per_epoch=num_batches,
-                                      validation_steps=num_batches_test,
-                                      **space)
+    try:
+        model = Model(**space)
+        losses = model.validate_generator(train_dataset, test_dataset,
+                                          steps_per_epoch=num_batches,
+                                          validation_steps=num_batches_test,
+                                          **space)
+    except Exception as e:
+        losses = {'log': e}
+
     losses['model'] = str(Model)
     losses['space'] = space
     losses['features'] = features_file_name
     losses['num_batches_train'] = num_batches
     losses['num_batches_test'] = num_batches_test
-    with open('{}/experiment_{}.json'.format(RESULTS_PATH, round(time())), 'w') as f:
+    identifier = round(time())
+    with open('{}/experiment_{}.json'.format(RESULTS_PATH, identifier), 'w') as f:
         json.dump(str(losses), f)
+    if 'val_recall_positives' in losses.keys():
+        if losses['val_recall_positives'][-1] > 0.4 and losses['val_precision_positives'][-1] > 0.1:
+            model.save('logs/models/model_{}.h5'.format(identifier))
