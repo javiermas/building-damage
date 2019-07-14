@@ -46,13 +46,11 @@ if not experiment_results.empty:
         .apply(lambda x: np.nan if isinstance(x, float) else x[-1])
     experiment_results['val_recall_positives_last_epoch'] = experiment_results['val_recall_positives']\
         .apply(lambda x: np.nan if isinstance(x, float) else x[-1])
-    experiment_results = experiment_results.loc[]
-    identifier = experiment_results.loc[
-        (experiment_results['val_precision_positives_last_epoch'].idxmax())
-        & (experiment_results['val_recall_positives_last_epoch'] > 0.4),
-        'id'
+    experiment_results = experiment_results.loc[
+        experiment_results['val_recall_positives_last_epoch'] > 0.4
     ]
-    space = experiment_results.loc[experiment_results['val_precision_positives_last_epoch'].idxmax(), 'space']
+    best_experiment = experiment_results.loc[experiment_results['val_precision_positives_last_epoch'].idxmax()]
+    space, identifier = best_experiment['space'], best_experiment['id']
     try:
         print('Loading model {}'.format(identifier))
         print('With space {}'.format(space))
