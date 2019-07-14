@@ -1,14 +1,16 @@
 from datetime import timedelta
 import pandas as pd
+import numpy as np
 
 from damage.features.base import Feature
 
 
 class AnnotationMaker(Feature):
 
-    def __init__(self, patch_size):
+    def __init__(self, patch_size, time_to_annotation_threshold):
         super().__init__()
         self.patch_size = patch_size
+        self.time_to_annotation_threshold = time_to_annotation_threshold
 
     def transform(self, data):
         annotation_data = {key: value for key, value in data.items() if 'annotation' in key}
@@ -16,8 +18,17 @@ class AnnotationMaker(Feature):
         annotation_data = self._assign_patch_id_to_annotation(annotation_data, data)
         annotation_data = self._group_annotations_by_patch_id(annotation_data)
         annotation_data = self._combine_annotations_with_raster_dates(annotation_data, data['RasterSplitter'])
-        annotation_data['destroyed'] = (annotation_data['damage_num'] == 3) * 1
+        annotation_data['destroyed'] = annotation_data['damage_num'].apply(self._damage_to_destruction)
         return annotation_data.set_index(['city', 'patch_id', 'date'])
+    
+    @staticmethod  
+    def _damage_to_destruction(damage_num):
+        if np.isnan(damage_num):
+            return np.nan 
+        elif damage_num == 3:
+            return 1
+        else:
+            return 0
 
     @staticmethod
     def _combine_annotation_data(annotation_data):
@@ -62,7 +73,6 @@ class AnnotationMaker(Feature):
         for city in cities:
             raster_data_single_city = raster_data.xs(city, level='city')
             raster_dates = [d.date() for d in raster_data_single_city.index.get_level_values('date').unique()]
-            threshold = timedelta(days=30*6)
             for date in raster_dates:
                 closest_previous_date = self._get_closest_previous_date(date, annotation_dates)
                 date_mapping = {
@@ -77,9 +87,7 @@ class AnnotationMaker(Feature):
             raster_dates,
             annotation_data.reset_index()
         )
-        threshold = timedelta(days=30*6)
-        annotations_by_gap = self._get_long_and_short_gap_annotations(raster_dates_with_annotation_data,
-                                                                      threshold)
+        annotations_by_gap = self._get_long_and_short_gap_annotations(raster_dates_with_annotation_data)
         annotations_long_gap, annotations_short_gap = annotations_by_gap
         # Pandas seems to have a bug that changes the dtype of
         # a date column to datetime automatically when assigning to index
@@ -100,14 +108,14 @@ class AnnotationMaker(Feature):
         ).drop('date', axis=1).rename(columns={'raster_date': 'date'})
         return raster_dates_with_annotation_data
 
-    def _get_long_and_short_gap_annotations(self, annotation_data, threshold):
+    def _get_long_and_short_gap_annotations(self, annotation_data):
         annotations_long_gap = annotation_data.loc[
             (annotation_data['date']\
-             - annotation_data['annotation_date']) > threshold
+             - annotation_data['annotation_date']) > self.time_to_annotation_threshold
         ]
         annotations_short_gap = annotation_data.loc[
             (annotation_data['date']\
-             - annotation_data['annotation_date']) <= threshold
+             - annotation_data['annotation_date']) <= self.time_to_annotation_threshold
         ]
         return annotations_long_gap, annotations_short_gap
 
@@ -131,13 +139,29 @@ class AnnotationMaker(Feature):
         # We take all raster data from the short gap ones, so we can fill it with 0 (no destruction).
         annotations_short_gap = pd.merge(raster_short_gap, annotations_short_gap,
                                          on=['city', 'patch_id', 'date'], how='left')
+        annotations_short_gap['damage_num'] = annotations_short_gap['damage_num'].fillna(0)
         # We take only raster data from the long gap that matches with the annotations,
-        # so we only keep the destroyed ones gap ones.
+        # so we only keep the destroyed ones, and we backfill with 0 (if not destroyed in future, not destroyed 
+        # in present, aka assume no reconstruction).
         annotations_long_gap = pd.merge(raster_long_gap, annotations_long_gap,
-                                         on=['city', 'patch_id', 'date'], how='inner')
-        annotation_data = pd.concat([annotations_short_gap, annotations_long_gap], sort=False)
-        # If there's no annotation, we assume it is not destroyed
-        annotation_data['damage_num'] = annotation_data['damage_num'].fillna(0)
+                                         on=['city', 'patch_id', 'date'], how='left')
+        annotation_data = pd.concat([annotations_short_gap, annotations_long_gap], sort=False)\
+            .sort_values(['city', 'patch_id', 'date'], ascending=True)\
+            .reset_index(drop=True)
+        annotation_data['damage_num_filled'] = annotation_data\
+            .groupby(['city', 'patch_id'])['damage_num']\
+            .bfill()
+        # If we couldnt match the annotations with the raster, then the annotation date
+        # will be missing (non-destroyed ones)
+
+        annotation_data.loc[
+            (annotation_data['annotation_date'].isnull())
+             & (annotation_data['damage_num_filled'] > 0),
+            'damage_num_filled'
+        ] = np.nan
+        annotation_data = annotation_data\
+            .drop('damage_num', axis=1)\
+            .rename(columns={'damage_num_filled': 'damage_num'})
         return annotation_data
 
     @staticmethod
