@@ -13,7 +13,7 @@ from damage import features
 
 
 parser = argparse.ArgumentParser()
-parser.add_argument('features')
+parser.add_argument('--features', required=True)
 parser.add_argument('--gpu')
 args = vars(parser.parse_args())
 
