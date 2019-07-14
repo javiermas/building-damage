@@ -6,6 +6,7 @@ import pandas as pd
 import numpy as np
 import tensorflow as tf
 from tensorflow.data import Dataset
+from tensorflow.keras.models import load_model
 from sklearn.model_selection import KFold
 
 from damage.models import CNN, RandomSearch
@@ -32,53 +33,40 @@ features = pd.read_pickle('{}/{}'.format(FEATURES_PATH, features_file_name))#.dr
 # Modelling
 Model = CNN
 
-# Choose space
+# Choose space and model
 experiment_results = load_experiment_results()
 if not experiment_results.empty:
-    experiment_results_single_model = experiment_results.loc[experiment_results['model'] == str(Model)]
-    experiment_results['val_precision_positives_mean'] = experiment_results['val_precision_positives']\
-        .apply(lambda x: np.nan if isinstance(x, float) else np.mean(x[-3:]))
-    experiment_results['val_recall_positives_mean'] = experiment_results['val_recall_positives']\
-        .apply(lambda x: np.nan if isinstance(x, float) else np.mean(x[-3:]))
-    experiment_results_single_model = experiment_results.loc[
-        experiment_results['val_recall_positives_mean'] > 0.4
+    available_models = [m.split('_')[1].split('.')[0] for m in os.listdir('logs/models')]
+    experiment_results = experiment_results.loc[experiment_results['model'] == str(Model)]
+    experiment_results = experiment_results.loc[experiment_results['id'].isin(available_models)]
+    experiment_results['val_precision_positives_last_epoch'] = experiment_results['val_precision_positives']\
+        .apply(lambda x: np.nan if isinstance(x, float) else x[-1])
+    experiment_results['val_recall_positives_last_epoch'] = experiment_results['val_recall_positives']\
+        .apply(lambda x: np.nan if isinstance(x, float) else x[-1])
+    experiment_results = experiment_results.loc[experiment_results['val_recall_positives_last_epoch'] > 0.4]
+    identifier = experiment_results.loc[
+        experiment_results['val_precision_positives_last_epoch'].idxmax(), 'id'
     ]
-    space = experiment_results_single_model.loc[
-        experiment_results_single_model['val_precision_positives_mean'].idxmax(), 'space']
+    space = experiment_results.loc[experiment_results['val_precision_positives_last_epoch'].idxmax(), 'space']
+    try:
+        print('Loading model {}'.format(identifier))
+        print('With space {}'.format(space))
+        model = load_model('logs/models/model_{}.h5'.format(identifier))
+        print('Model loaded')
+    except Exception as e:
+        print('Error loading model')
+        print(e)
+        assert False
 else:
     space = RandomSearch._sample_single_cnn_space()
-
-space = {'class_weight': {0: 0.345, 1: 0.655}, 'batch_size': 30, 'layer_type': 'cnn', 'convolutional_layers': [{'dropout': 0.1, 'activation': 'relu', 'kernel_size': [5, 5], 'filters': 32, 'pool_size': [4, 4]}, {'dropout': 0.1, 'activation': 'relu', 'kernel_size': [5, 5], 'filters': 64, 'pool_size': [4, 4]}, {'dropout': 0.1, 'activation': 'relu', 'kernel_size': [5, 5], 'filters': 128, 'pool_size': [4, 4]}, {'dropout': 0.1, 'activation': 'relu', 'kernel_size': [5, 5], 'filters': 256, 'pool_size': [4, 4]}], 'dense_units': 128, 'epochs': 11}
-
-space['epochs'] = min(space['epochs'], 5)
-class_proportion = {
-    1: 0.3,
-}
-
-# Get data generators
-features_upsampled = DataStream._upsample_class_proportion(features.dropna(subset=['destroyed']), class_proportion).sample(frac=1)
-train_generator = DataStream._get_index_generator(features_upsampled, space['batch_size'])
-num_batches = len(train_generator)
-train_generator = DataStream.get_train_data_generator_from_index(
-    [features_upsampled['image'], features_upsampled['destroyed']],
-    train_generator
-)
-train_dataset = Dataset.from_generator(lambda: train_generator, (tf.float32, tf.int32))
 
 test_generator = DataStream._get_index_generator(features, space['batch_size'], KFold)
 num_batches_test = len(test_generator)
 test_generator = DataStream.get_test_data_generator_from_index(features['image'], test_generator)
 test_dataset = Dataset.from_generator(lambda: test_generator, tf.float32)
 
-# Fit model and predict
-print('Training with space: \n')
-print(space)
-model = Model(**space)
-model.fit_generator(train_dataset,
-                    steps_per_epoch=num_batches,
-                    verbose=1,
-                    **space)
-
+# Predict
+print('Generating predictions')
 predictions = model.predict_generator(test_dataset, steps=num_batches_test)
 predictions = pd.DataFrame({
     'prediction': predictions.reshape(-1),
