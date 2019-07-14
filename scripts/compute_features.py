@@ -2,6 +2,7 @@ import argparse
 import pickle
 import sys
 from time import time
+from datetime import timedelta
 
 from damage.data import load_data_multiple_cities
 from damage import features
@@ -26,6 +27,7 @@ file_name = args.get('filename', None) or '{}.p'.format(str(round(time())))
 STORING_PATH = 'logs/features'
 CITIES = ['aleppo']
 PATCH_SIZE = 64
+TIME_TO_ANNOTATION_THRESHOLD = timedelta(weeks=1)
 STRIDE = PATCH_SIZE  # dont change
 
 # Reading
@@ -38,7 +40,7 @@ pipeline = features.Pipeline(
     ],
     features=[
         ('RasterSplitter', features.RasterSplitter(patch_size=PATCH_SIZE, stride=STRIDE)),
-        ('AnnotationMaker', features.AnnotationMaker(patch_size=PATCH_SIZE)),
+        ('AnnotationMaker', features.AnnotationMaker(PATCH_SIZE, TIME_TO_ANNOTATION_THRESHOLD)),
         ('RasterPairMaker', features.RasterPairMaker()),
     ],
 )
