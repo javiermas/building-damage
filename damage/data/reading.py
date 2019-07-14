@@ -78,6 +78,7 @@ def load_experiment_results(path=EXPERIMENTS_PATH):
             try:
                 result = eval(json.load(f))
                 result['id'] = int(file_name.split('_')[1].split('.')[0])
+                result['name'] = file_name
                 experiment_results.append(result)
             except:
                 continue

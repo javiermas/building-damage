@@ -19,7 +19,7 @@ class RandomSearch:
         kernel_size = random.choice([3, 5, 7, 9])
         pool_size = kernel_size-1
         dropout = random.choice(np.linspace(0.1, 0.8, 10))
-        activation = random.choice(['relu', 'softmax'])
+        activation = random.choice(['relu']) # ReLU has shown much better performance
         for _ in range(num_layers):
             filters = filters*2
             layer = {

@@ -13,7 +13,7 @@ from damage.models import CNN, RandomSearch, CNNPreTrained
 
 
 parser = argparse.ArgumentParser()
-parser.add_argument('features')
+parser.add_argument('--features', required=True)
 parser.add_argument('--gpu')
 args = vars(parser.parse_args())
 
@@ -25,9 +25,9 @@ features_file_name = args.get('features')
 
 # Reading
 features = pd.read_pickle('{}/{}'.format(FEATURES_PATH, features_file_name)).dropna(subset=['destroyed'])
-features_destroyed = features.loc[features['destroyed'] == 1].sample(200)
-features_non_destroyed = features.loc[features['destroyed'] == 0].sample(2000)
-features = pd.concat([features_destroyed, features_non_destroyed])
+#features_destroyed = features.loc[features['destroyed'] == 1].sample(200)
+#features_non_destroyed = features.loc[features['destroyed'] == 0].sample(2000)
+#features = pd.concat([features_destroyed, features_non_destroyed])
 
 #### Modelling
 sampler = RandomSearch()
@@ -68,7 +68,6 @@ num_batches = len(train_indices)
 num_batches_test = len(test_indices)
 #Validate
 for space in spaces:
-    space['epochs'] = 2
     space['batch_size'] = batch_size
     space['class_weight'] = {
         0: (class_proportion[1] * space['class_weight']),
@@ -83,7 +82,7 @@ for space in spaces:
                                           validation_steps=num_batches_test,
                                           **space)
     except Exception as e:
-        losses = {'log': e}
+        losses = {'log': str(e)}
 
     losses['model'] = str(Model)
     losses['space'] = space
