@@ -37,15 +37,20 @@ Model = CNN
 experiment_results = load_experiment_results()
 if not experiment_results.empty:
     available_models = [m.split('_')[1].split('.')[0] for m in os.listdir('logs/models')]
-    experiment_results = experiment_results.loc[experiment_results['model'] == str(Model)]
-    experiment_results = experiment_results.loc[experiment_results['id'].isin(available_models)]
+    experiment_results = experiment_results.loc[
+        (experiment_results['model'] == str(Model))
+        & (experiment_results['features'] == features_file_name)
+        & (experiment_results['id'].isin(available_models))
+    ]
     experiment_results['val_precision_positives_last_epoch'] = experiment_results['val_precision_positives']\
         .apply(lambda x: np.nan if isinstance(x, float) else x[-1])
     experiment_results['val_recall_positives_last_epoch'] = experiment_results['val_recall_positives']\
         .apply(lambda x: np.nan if isinstance(x, float) else x[-1])
-    experiment_results = experiment_results.loc[experiment_results['val_recall_positives_last_epoch'] > 0.4]
+    experiment_results = experiment_results.loc[]
     identifier = experiment_results.loc[
-        experiment_results['val_precision_positives_last_epoch'].idxmax(), 'id'
+        (experiment_results['val_precision_positives_last_epoch'].idxmax())
+        & (experiment_results['val_recall_positives_last_epoch'] > 0.4),
+        'id'
     ]
     space = experiment_results.loc[experiment_results['val_precision_positives_last_epoch'].idxmax(), 'space']
     try:
@@ -54,10 +59,9 @@ if not experiment_results.empty:
         model = load_model('logs/models/model_{}.h5'.format(identifier))
         print('Model loaded')
     except Exception as e:
-        print('Error loading model')
-        print(e)
-        assert False
+        raise e('Error loading model')
 else:
+    print('Predicting with randomly sampled space. It is recommended to run some experiments first')
     space = RandomSearch._sample_single_cnn_space()
 
 test_generator = DataStream._get_index_generator(features, space['batch_size'], KFold)
