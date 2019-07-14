@@ -49,7 +49,7 @@ This script will train on all data and predict on all data to generate maps of d
 ```
 python scripts/predict.py --features=<example_name.p> --gpu=<gpu_number>
 ```
-Predictions will be stored under `logs/predictions` using the name `prediction_<timestamp>.h5`
+Predictions will be stored as pickle files under `logs/predictions` using the name `prediction_<timestamp>.p`
 
 ## Technical details
 
