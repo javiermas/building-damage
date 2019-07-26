@@ -1,6 +1,7 @@
 import argparse
 import pickle
 import sys
+sys.path.insert(1, './')
 from time import time
 from datetime import timedelta
 
