@@ -39,6 +39,7 @@ class RasterSplitter(Feature):
                         'image': array[top:bottom, left:right],
                         'longitude': longitude,
                         'latitude': latitude,
+                        'is_in_no_analysis?': no_analysis_areas_polygon.contains(Point(longitude, latitude)),
                         'city': city,
                         'date': date(year=year, month=month, day=day),
                         'patch_id': '{}-{}'.format(w, h),
@@ -47,7 +48,7 @@ class RasterSplitter(Feature):
 
         tiles = pd.DataFrame(tiles)
         return tiles
-    
+
     @staticmethod
     def _get_polygons_from_data_dict_single_city(data_dict, city):
         # No analysis
@@ -69,7 +70,7 @@ class RasterSplitter(Feature):
             return False
 
         elif no_analysis_areas.contains(point):
-            return False
+            return True
 
         else:
             return True
