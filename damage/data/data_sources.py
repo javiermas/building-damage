@@ -30,6 +30,10 @@ DATA_SOURCES = {
         ],
         'rasters': [
             'daraa_2011_10_17_zoom_19.tif',
+            'daraa_2013_11_10_zoom_19.tif',
+            'daraa_2014_05_01_zoom_19.tif',
+            'daraa_2016_02_25_zoom_19.tif',
+            'daraa_2016_04_19_zoom_19.tif',
             'daraa_2017_02_07_zoom_19.tif',
         ],
         'no_analysis': [
