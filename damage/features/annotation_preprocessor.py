@@ -15,7 +15,7 @@ class AnnotationPreprocessor(Preprocessor):
 
             value = self._add_latitude_and_longitude(value)
             value = value.rename({'StlmtNme': 'city'}, axis=1)
-            value['city'] = value['city'].str.lower().str.replace(" ", "_")
+            value['city'] = value['city'].str.lower().apply(lambda x: x.split(' ')[0])
             assert value['city'].nunique() == 1
             city = value['city'].unique()[0]
             raster_key = [key for key in data.keys() if 'raster' in key and city in key][0]
