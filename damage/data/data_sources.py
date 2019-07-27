@@ -90,14 +90,14 @@ DATA_SOURCES = {
     },
     'deir': {
         'annotations': [
-            '4_Damage_Sites_Deir_CDA.shp',
+            '4_Damage_Sites_Deir-ez-Zor_CDA.shp',
         ],
         'rasters': [
-            'deir_2016_05_25_zoom_19.tif',
-            'deir_2012_12_05_zoom_19.tif',
+            'deir-ez-zor_2016_05_25_zoom_19.tif',
+            'deir-ez-zor_2012_12_05_zoom_19.tif',
         ],
         'no_analysis': [
-            '5_No_Analysis_Areas_Deir.shp',
+            '5_No_Analysis_Areas_Deir-ez-Zor.shp',
         ],
     },
 }
