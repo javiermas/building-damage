@@ -61,7 +61,7 @@ class RasterSplitter(Feature):
         populated_areas = data_dict[populated_areas_key]
         populated_areas_city = populated_areas.loc[populated_areas['NAME_EN'].str.lower() == city]
         populated_areas_geometry = populated_areas_city['geometry'].tolist()
-        populated_areas_polygon = MultiPolygon(populated_areas_geometry)
+        populated_areas_polygon = MultiPolygon(populated_areas_geometry).buffer(0)
         return no_analysis_areas_polygon, populated_areas_polygon
 
     @staticmethod
@@ -70,7 +70,7 @@ class RasterSplitter(Feature):
             return False
 
         elif no_analysis_areas.contains(point):
-            return True
+            return False
 
         else:
             return True

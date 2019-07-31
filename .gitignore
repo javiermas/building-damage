@@ -8,3 +8,4 @@ damage.egg-info
 *.out
 *.pdf
 *.p
+*.h5
