@@ -71,7 +71,9 @@ DATA_SOURCES = {
             '4_Damage_Sites_Homs_CDA.shp',
         ],
         'rasters': [
+            'homs_2016_05_30_zoom_19.tif',
             'homs_2014_04_03_zoom_19.tif',
+            'homs_2013_10_31_zoom_19.tif',
             'homs_2011_05_21_zoom_19.tif',
         ],
         'no_analysis': [
