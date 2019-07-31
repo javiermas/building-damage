@@ -97,6 +97,8 @@ DATA_SOURCES = {
         ],
         'rasters': [
             'idlib_2011_07_31_zoom_19.tif',
+            'idlib_2014_02_07_zoom_19.tif',
+            'idlib_2014_05_31_zoom_19.tif',
             'idlib_2016_08_01_zoom_19.tif',
         ],
         'no_analysis': [
