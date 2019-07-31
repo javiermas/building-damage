@@ -16,7 +16,7 @@ file_name = args.get('filename', None) or '{}.p'.format(str(round(time())))
 
 # Constants
 STORING_PATH = 'logs/features'
-CITIES = ['aleppo']
+CITIES = ['aleppo','daraa','homs','damascus','idlib']
 PATCH_SIZE = 64
 TIME_TO_ANNOTATION_THRESHOLD = timedelta(weeks=1)
 STRIDE = PATCH_SIZE  # dont change
