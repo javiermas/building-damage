@@ -58,7 +58,9 @@ DATA_SOURCES = {
         ],
         'rasters': [
             'raqqa_2013_01_17_zoom_19.tif',
+            'raqqa_2014_03_21_zoom_19.tif',
             'raqqa_2015_02_02_zoom_19.tif',
+            'raqqa_2016_07_01_zoom_19.tif',
         ],
         'no_analysis': [
             '5_No_Analysis_Areas_Raqqa.shp',
