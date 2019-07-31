@@ -76,6 +76,21 @@ DATA_SOURCES = {
             '5_No_Analysis_Areas_Homs.shp',
         ],
     },
+    'hama': {
+        'annotations': [
+            '4_Damage_Sites_Hama_CDA.shp',
+        ],
+        'rasters': [
+            'hama_2012_02_22_zoom_19.tif',
+            'hama_2013_10_31_zoom_19.tif',
+            'hama_2014_04_03_zoom_19.tif',
+            'hama_2016_06_30_zoom_19.tif',
+            'hama_2016_07_29_zoom_19.tif',
+        ],
+        'no_analysis': [
+            '5_No_Analysis_Areas_Hama.shp',
+        ],
+    },
     'idlib': {
         'annotations': [
             '4_Damage_Sites_Idlib_CDA.shp',
