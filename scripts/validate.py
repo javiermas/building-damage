@@ -22,12 +22,17 @@ os.environ['CUDA_VISIBLE_DEVICES'] = args.get('gpu', None) or '5'
 RESULTS_PATH = 'logs/experiments'
 FEATURES_PATH = 'logs/features'
 features_file_name = args.get('features')
+list_feature_filenames_by_city = features_file_name.split(',')
 
-# Reading
-features = pd.read_pickle('{}/{}'.format(FEATURES_PATH, features_file_name)).dropna(subset=['destroyed'])
-#features_destroyed = features.loc[features['destroyed'] == 1].sample(200)
-#features_non_destroyed = features.loc[features['destroyed'] == 0].sample(2000)
-#features = pd.concat([features_destroyed, features_non_destroyed])
+appended_features = []
+for city_feature_filename in list_feature_filenames_by_city:
+    # Reading
+    features_city = pd.read_pickle('{}/{}'.format(FEATURES_PATH, city_feature_filename)).dropna(subset=['destroyed'])
+    appended_features.append(features_city)
+    #features_destroyed = features.loc[features['destroyed'] == 1].sample(200)
+    #features_non_destroyed = features.loc[features['destroyed'] == 0].sample(2000)
+    #features = pd.concat([features_destroyed, features_non_destroyed])
+features = pd.concat(appended_data, ignore_index=True)
 
 #### Modelling
 sampler = RandomSearch()
