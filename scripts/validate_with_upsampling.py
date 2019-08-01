@@ -42,7 +42,7 @@ for city_feature_filename in list_feature_filenames_by_city:
         # upsampling for cities with less rasters
         n_df = features_city.shape[0]
         #sample with replacement
-        ix = choices(np.arange(n_df), k=n_a-n_df)
+        ix = choices(np.arange(n_df), k=n_base-n_df)
         xtra_df = df_city.loc[ix, :]
         appended_dfs.append(xtra_df)
     #features_destroyed = features.loc[features['destroyed'] == 1].sample(200)
