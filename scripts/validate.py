@@ -32,7 +32,7 @@ for city_feature_filename in list_feature_filenames_by_city:
     #features_destroyed = features.loc[features['destroyed'] == 1].sample(200)
     #features_non_destroyed = features.loc[features['destroyed'] == 0].sample(2000)
     #features = pd.concat([features_destroyed, features_non_destroyed])
-features = pd.concat(appended_data, ignore_index=True)
+features = pd.concat(appended_features, ignore_index=True)
 
 #### Modelling
 sampler = RandomSearch()
