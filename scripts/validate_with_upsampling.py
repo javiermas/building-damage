@@ -37,10 +37,11 @@ for city_feature_filename in list_feature_filenames_by_city:
     features_city = pd.read_pickle('{}/{}'.format(FEATURES_PATH, city_feature_filename)).dropna(subset=['destroyed'])
     appended_features.append(features_city)
     if city_feature_filename.lower() == base_city:
-        n_a = features_city.shape[0]
+        n_base = features_city.shape[0]
     else:
         # upsampling for cities with less rasters
         n_df = features_city.shape[0]
+        #sample with replacement
         ix = choices(np.arange(n_df), k=n_a-n_df)
         xtra_df = df_city.loc[ix, :]
         appended_dfs.append(xtra_df)
