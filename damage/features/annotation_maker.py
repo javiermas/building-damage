@@ -156,7 +156,7 @@ class AnnotationMaker(Feature):
 
         annotation_data.loc[
             (annotation_data['annotation_date'].isnull())
-             & (annotation_data['damage_num_filled'] > 0),
+             & (annotation_data['damage_num_filled'] == 3),
             'damage_num_filled'
         ] = np.nan
         annotation_data = annotation_data\
