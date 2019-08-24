@@ -11,12 +11,13 @@ from damage import features
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--filename')
+parser.add_argument('--city')
 args = vars(parser.parse_args())
 file_name = args.get('filename', None) or '{}.p'.format(str(round(time())))
 
 # Constants
 STORING_PATH = 'logs/features'
-CITIES = ['aleppo','daraa','homs','damascus','idlib']
+CITIES = [args['city']]
 PATCH_SIZE = 64
 TIME_TO_ANNOTATION_THRESHOLD = timedelta(weeks=1)
 STRIDE = PATCH_SIZE  # dont change
