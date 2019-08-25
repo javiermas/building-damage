@@ -91,7 +91,10 @@ class AnnotationMaker(Feature):
         annotations_long_gap, annotations_short_gap = annotations_by_gap
         # Pandas seems to have a bug that changes the dtype of
         # a date column to datetime automatically when assigning to index
-        raster_index = pd.DataFrame(raster_data.index.tolist(), columns=raster_data.index.names)
+        raster_index = pd.DataFrame(
+            raster_data.index.tolist(),
+            columns=raster_data.index.names
+        )
         raster_index['date'] = raster_index['date'].dt.date
         annotation_data = self._combine_long_and_short_gap_annotations_with_raster_data(
             annotations_long_gap,
@@ -127,13 +130,17 @@ class AnnotationMaker(Feature):
 
         closest_previous_date = max(previous_dates)
         return closest_previous_date
-
+    
     def _combine_long_and_short_gap_annotations_with_raster_data(
         self,
         annotations_long_gap,
         annotations_short_gap,
         raster_data
         ):
+        last_annotation = pd.concat([
+            annotations_long_gap['annotation_date'],
+            annotations_short_gap['annotation_date']
+        ]).max()
         raster_short_gap = raster_data.loc[raster_data['date'].isin(annotations_short_gap['date'].unique())]
         raster_long_gap = raster_data.loc[raster_data['date'].isin(annotations_long_gap['date'].unique())]
         # We take all raster data from the short gap ones, so we can fill it with 0 (no destruction).
@@ -141,19 +148,28 @@ class AnnotationMaker(Feature):
                                          on=['city', 'patch_id', 'date'], how='left')
         annotations_short_gap['damage_num'] = annotations_short_gap['damage_num'].fillna(0)
         # We take only raster data from the long gap that matches with the annotations,
-        # so we only keep the destroyed ones, and we backfill with 0 (if not destroyed in future, not destroyed 
-        # in present, aka assume no reconstruction).
+        # so we only keep the destroyed ones, and we backfill with 0
+        # (if not destroyed in future, not destroyed in present, aka assume no reconstruction)
         annotations_long_gap = pd.merge(raster_long_gap, annotations_long_gap,
                                          on=['city', 'patch_id', 'date'], how='left')
         annotation_data = pd.concat([annotations_short_gap, annotations_long_gap], sort=False)\
             .sort_values(['city', 'patch_id', 'date'], ascending=True)\
             .reset_index(drop=True)
+        # In case there are no ground truth sets after some rasters, we fill the raster
+        # that is closest to the last annotation with 0s so they can be carried back
+        closest_previous_date = self._get_closest_previous_date(
+            last_annotation, annotation_data['date'].unique())
+        annotation_data.loc[
+            (annotation_data['date'] == closest_previous_date)
+            & (annotation_data['damage_num'].isnull()),
+            'damage_num'
+        ] = 0
+        annotation_data = annotation_data.sort_values(['city', 'patch_id', 'date'])
         annotation_data['damage_num_filled'] = annotation_data\
             .groupby(['city', 'patch_id'])['damage_num']\
             .bfill()
         # If we couldnt match the annotations with the raster, then the annotation date
         # will be missing (non-destroyed ones)
-
         annotation_data.loc[
             (annotation_data['annotation_date'].isnull())
              & (annotation_data['damage_num_filled'] == 3),
