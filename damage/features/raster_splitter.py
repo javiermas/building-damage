@@ -29,8 +29,11 @@ class RasterSplitter(Feature):
             for w in tqdm(range(self.patch_size//2, (raster.width - self.patch_size//2), self.stride)):
                 for h in range(self.patch_size//2, (raster.height - self.patch_size//2), self.stride):
                     longitude, latitude = raster.xy(h, w)
-                    point_is_valid = self._is_point_valid(Point(longitude, latitude), populated_areas_polygon,
-                                                          no_analysis_areas_polygon)
+                    point_is_valid = self._is_point_valid(
+                        Point(longitude, latitude),
+                        populated_areas_polygon,
+                        no_analysis_areas_polygon
+                    )
                     if not point_is_valid:
                         continue
 
@@ -39,7 +42,6 @@ class RasterSplitter(Feature):
                         'image': array[top:bottom, left:right],
                         'longitude': longitude,
                         'latitude': latitude,
-                        'is_in_no_analysis?': no_analysis_areas_polygon.contains(Point(longitude, latitude)),
                         'city': city,
                         'date': date(year=year, month=month, day=day),
                         'patch_id': '{}-{}'.format(w, h),
@@ -52,14 +54,25 @@ class RasterSplitter(Feature):
     @staticmethod
     def _get_polygons_from_data_dict_single_city(data_dict, city):
         # No analysis
-        no_analysis_key = [key for key in data_dict if 'no_analysis' in key and city in key.lower()][0]
+        no_analysis_key = [key for key in data_dict if 'no_analysis' in key
+                           and city in key.lower()][0]
         no_analysis_areas = data_dict[no_analysis_key]
         no_analysis_areas_geometry = no_analysis_areas['geometry'].tolist()
         no_analysis_areas_polygon = MultiPolygon(no_analysis_areas_geometry).buffer(0)
         # Populated areas
         populated_areas_key = [key for key in data_dict if 'populated' in key][0]
         populated_areas = data_dict[populated_areas_key]
-        populated_areas_city = populated_areas.loc[populated_areas['NAME_EN'].str.lower() == city]
+        if city == 'raqqa':
+            populated_areas_city = populated_areas.loc[
+                populated_areas['ADM3_EN'].apply(lambda x: False if x is None
+                                                 else 'Raqqa' in x)
+            ]
+        else:
+            populated_areas_city = populated_areas.loc[
+                    populated_areas['NAME_EN'].str.lower() == city
+            ]
+        if populated_areas_city.empty:
+            raise Exception(f'No populated areas for city {city}')
         populated_areas_geometry = populated_areas_city['geometry'].tolist()
         populated_areas_polygon = MultiPolygon(populated_areas_geometry).buffer(0)
         return no_analysis_areas_polygon, populated_areas_polygon
