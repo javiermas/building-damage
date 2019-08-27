@@ -34,12 +34,31 @@ class DataStream:
         batches = list(map(lambda x: x[1], batches))
         return batches
 
-    @staticmethod
-    def get_train_data_generator_from_index(data, index):
+    def get_train_data_generator_from_index(self, data, index, augment=True):
         while True:
             for _index in index:
-                batch = tuple([np.stack(dataframe.iloc[_index]) for dataframe in data])
-                yield batch
+                features = data[0].iloc[_index]
+                target = np.stack(data[1].iloc[_index])
+                if augment:
+                    original_length = len(features)
+                    feature_list = []
+                    for im in features.values:
+                        feature_list.extend(self._augment_data(im)) 
+
+                    features = np.stack(feature_list)
+                    multiplier = len(features)/original_length
+                    target = np.repeat(target, [multiplier]*len(target), axis=0)
+                else:
+                    features = np.stack(features)
+
+                yield features, target
+
+    def _augment_data(image):
+        augmented_data = [image]
+        augmented_data.append(np.fliplr(image))
+        augmented_data.append(np.flipud(image))
+        augmented_data.append(np.fliplr(augmented_data[-1]))
+        return augmented_data
 
     @staticmethod
     def get_test_data_generator_from_index(data, index):
