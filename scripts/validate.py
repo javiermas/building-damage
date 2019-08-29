@@ -29,11 +29,13 @@ appended_features = []
 for city_feature_filename in list_feature_filenames_by_city:
     # Reading
     features_city = pd.read_pickle('{}/{}'.format(FEATURES_PATH, city_feature_filename)).dropna(subset=['destroyed'])
+    '''
     features_destroyed = features_city.loc[features_city['destroyed'] == 1]\
         .sample(2, replace=True)
     features_non_destroyed = features_city.loc[features_city['destroyed'] == 0]\
         .sample(2000, replace=True)
     features_city = pd.concat([features_destroyed, features_non_destroyed])
+    '''
     appended_features.append(features_city)
 
 features = pd.concat(appended_features)
@@ -46,17 +48,14 @@ models = {
 }
 Model = random.choice([CNN])
 sample_func = models[Model]
-class_proportions = map(float, np.linspace(0.01, 1, 5))
+#class_proportions = map(float, np.linspace(0.01, 1, 5))
+class_proportions = [0.3]
 print(class_proportions)
 for proportion in class_proportions:
     class_proportion = {
         1: proportion,
     }
     spaces = sample_func(10)
-# Do splits
-#class_proportion = {
-#    1: 0.3,
-#}
     batch_size = spaces[0]['batch_size']
     test_batch_size = 500
     train_proportion = 0.7
@@ -78,7 +77,7 @@ for proportion in class_proportions:
     train_generator = data_stream.get_train_data_generator_from_index(
         data=[train_data_upsampled['image'], train_data_upsampled['destroyed']],
         index=train_indices,
-        augment=True
+        augment=False
     )
     test_generator = data_stream.get_train_data_generator_from_index(
         data=[test_data['image'], test_data['destroyed']],
@@ -93,9 +92,12 @@ for proportion in class_proportions:
     for space in spaces:
         space['batch_size'] = batch_size
         space['prop_1_to_0'] = class_proportion[1]
+        space['prop_1_train'] = train_data['destroyed'].mean()
+        class_weight_0 = max(class_proportion[1] * space['class_weight'], 0.1)
+        class_weight_1 = min((1 - (class_proportion[1] * space['class_weight'])), 0.9)
         space['class_weight'] = {
-            0: 1,#class_proportion[1],
-            1: 1# - class_proportion[1]
+            0: class_weight_0,
+            1: class_weight_1
         }
         print('Now validating:\n')
         print(space)
