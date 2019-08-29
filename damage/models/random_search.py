@@ -48,7 +48,7 @@ class RandomSearch:
             'convolutional_layers': convolutional_layers,
             'epochs': random.choice(range(5, 15)),
             'layer_type': random.choice(['cnn']),
-            'class_weight': 1.15,
+            'class_weight': random.choice(np.linspace(0.6, 1.4)),
             'learning_rate': random.choice(np.geomspace(1e-3, 1)),
         }
 
@@ -63,7 +63,7 @@ class RandomSearch:
             'learning_rate': random.choice(np.geomspace(1e-3, 1)),
             'batch_size': random.choice(range(25, 50)),
             'epochs': random.choice(range(5, 15)),
-            'class_weight': random.choice(np.linspace(0.8, 1.2)),
+            'class_weight': random.choice(np.linspace(0.6, 1.4)),
             'convolutional_layers': convolutional_layers,
         }
         return space
