@@ -43,7 +43,7 @@ class DataStream:
                     original_length = len(features)
                     feature_list = []
                     for im in features.values:
-                        feature_list.extend(self._augment_data(im)) 
+                        feature_list.extend(self._augment_data(im))
 
                     features = np.stack(feature_list)
                     multiplier = len(features)/original_length
@@ -52,7 +52,8 @@ class DataStream:
                     features = np.stack(features)
 
                 yield features, target
-
+    
+    @staticmethod
     def _augment_data(image):
         augmented_data = [image]
         augmented_data.append(np.fliplr(image))
