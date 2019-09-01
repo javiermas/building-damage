@@ -9,6 +9,7 @@ import numpy as np
 import tensorflow as tf
 from tensorflow.data import Dataset
 from tensorflow.errors import ResourceExhaustedError
+from keras.preprocessing.image import ImageDataGenerator
 
 from damage.data import DataStream
 from damage.models import CNN, RandomSearch, CNNPreTrained
@@ -31,7 +32,7 @@ for city_feature_filename in list_feature_filenames_by_city:
     # Reading
     features_city = pd.read_pickle('{}/{}'.format(FEATURES_PATH, city_feature_filename)).dropna(subset=['destroyed'])
     features_destroyed = features_city.loc[features_city['destroyed'] == 1]\
-        .sample(2, replace=True)
+        .sample(20, replace=True)
     features_non_destroyed = features_city.loc[features_city['destroyed'] == 0]\
         .sample(2000, replace=True)
     features_city = pd.concat([features_destroyed, features_non_destroyed])
@@ -40,6 +41,7 @@ for city_feature_filename in list_feature_filenames_by_city:
 features = pd.concat(appended_features)
 
 #### Modelling
+import ipdb; ipdb.set_trace()
 sampler = RandomSearch()
 models = {
     CNN: sampler.sample_cnn,
@@ -47,6 +49,8 @@ models = {
 }
 Model = random.choice([CNN])
 sample_func = models[Model]
+augment_brightness = random.choice([False])
+augment_flip = random.choice([False])
 class_proportion = {
     1: .3
 }
@@ -67,16 +71,20 @@ train_data_upsampled = data_stream._upsample_class_proportion(train_data, class_
 test_patches = list(set(unique_patches) - set(train_patches))
 test_data = features.loc[features.index.get_level_values('patch_id').isin(test_patches)]
 
+import ipdb; ipdb.set_trace()
 train_indices = data_stream._get_index_generator(train_data_upsampled, batch_size)
 test_indices = data_stream._get_index_generator(test_data, test_batch_size)
 train_generator = data_stream.get_train_data_generator_from_index(
     data=[train_data_upsampled['image'], train_data_upsampled['destroyed']],
     index=train_indices,
-    augment=False
+    augment_flip=augment_flip,
+    augment_brightness=augment_brightness,
 )
 test_generator = data_stream.get_train_data_generator_from_index(
     data=[test_data['image'], test_data['destroyed']],
-    index=test_indices
+    index=test_indices,
+    augment_flip=False,
+    augment_brightness=False,
 )
 train_dataset = Dataset.from_generator(lambda: train_generator, (tf.float32, tf.int32))
 test_dataset = Dataset.from_generator(lambda: test_generator, (tf.float32, tf.int32))
@@ -110,6 +118,8 @@ for space in spaces:
     losses['features'] = features_file_name
     losses['num_batches_train'] = num_batches
     losses['num_batches_test'] = num_batches_test
+    losses['augment_flip'] = augment_flip
+    losses['augment_brightness'] = augment_brightness
     identifier = round(time())
     with open('{}/experiment_{}.json'.format(RESULTS_PATH, identifier), 'w') as f:
         json.dump(str(losses), f)
