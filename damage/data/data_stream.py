@@ -1,4 +1,5 @@
 from math import ceil
+from PIL import Image, ImageEnhance
 import random
 import numpy as np
 import pandas as pd
@@ -34,33 +35,41 @@ class DataStream:
         batches = list(map(lambda x: x[1], batches))
         return batches
 
-    def get_train_data_generator_from_index(self, data, index, augment=True):
+    def get_train_data_generator_from_index(
+        self,
+        data,
+        index,
+        augment_flip,
+        augment_brightness):
         while True:
             for _index in index:
-                features = data[0].iloc[_index]
+                features = data[0].iloc[_index].values
                 target = np.stack(data[1].iloc[_index])
-                if augment:
-                    original_length = len(features)
-                    feature_list = []
-                    for im in features.values:
-                        feature_list.extend(self._augment_data(im))
+                if augment_flip:
+                    features = [self._flip(image) for image in features]
+                elif augment_brightness:
+                    features = [self._augment_brightness(image) for image in features]
 
-                    features = np.stack(feature_list)
-                    multiplier = len(features)/original_length
-                    target = np.repeat(target, [multiplier]*len(target), axis=0)
-                else:
-                    features = np.stack(features)
-
+                features = np.stack(features)
                 yield features, target
     
     @staticmethod
-    def _augment_data(image):
-        augmented_data = [image]
-        augmented_data.append(np.fliplr(image))
-        augmented_data.append(np.flipud(image))
-        augmented_data.append(np.fliplr(augmented_data[-1]))
-        return augmented_data
-
+    def _flip(image):
+        flipping_funcs = [
+            lambda image: image,
+            lambda image: np.fliplr(image),
+            lambda image: np.flipud(image),
+            lambda image: np.fliplr(np.flipud(image)),
+        ]
+        func = random.choice(flipping_funcs)
+        return func(image)
+    
+    @staticmethod
+    def _augment_brightness(image):
+        alpha = random.choice(np.linspace(0.85, 1.4))
+        image_augmented = image * alpha
+        return image_augmented
+    
     @staticmethod
     def get_test_data_generator_from_index(data, index):
         while True:
