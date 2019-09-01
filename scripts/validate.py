@@ -30,11 +30,13 @@ appended_features = []
 for city_feature_filename in list_feature_filenames_by_city:
     # Reading
     features_city = pd.read_pickle('{}/{}'.format(FEATURES_PATH, city_feature_filename)).dropna(subset=['destroyed'])
+    '''
     features_destroyed = features_city.loc[features_city['destroyed'] == 1]\
         .sample(2, replace=True)
     features_non_destroyed = features_city.loc[features_city['destroyed'] == 0]\
         .sample(2000, replace=True)
     features_city = pd.concat([features_destroyed, features_non_destroyed])
+    '''
     appended_features.append(features_city)
 
 features = pd.concat(appended_features)
@@ -52,7 +54,7 @@ class_proportion = {
 }
 spaces = sample_func(10)
 batch_size = spaces[0]['batch_size']
-test_batch_size = 500
+test_batch_size = 200
 train_proportion = 0.7
 data_stream = DataStream(
     batch_size=batch_size,
@@ -110,9 +112,11 @@ for space in spaces:
     losses['features'] = features_file_name
     losses['num_batches_train'] = num_batches
     losses['num_batches_test'] = num_batches_test
+    losses['batch_size_test'] = test_batch_size
     identifier = round(time())
     with open('{}/experiment_{}.json'.format(RESULTS_PATH, identifier), 'w') as f:
         json.dump(str(losses), f)
+        print('Experiemnt saved in experiment_{}.json'.format(identifier))
     if 'val_recall_positives' in losses.keys():
         if losses['val_recall_positives'][-1] > 0.4 and losses['val_precision_positives'][-1] > 0.1:
             test_data[['destroyed']].to_pickle(
