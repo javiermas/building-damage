@@ -24,6 +24,7 @@ args = vars(parser.parse_args())
 os.environ['CUDA_VISIBLE_DEVICES'] = args.get('gpu', None) or '5'
 RESULTS_PATH = 'logs/experiments'
 FEATURES_PATH = 'logs/features'
+PREDICTIONS_PATH = 'logs/predictions'
 features_file_name = args.get('features')
 list_feature_filenames_by_city = features_file_name.split(',')
 
@@ -41,7 +42,6 @@ for city_feature_filename in list_feature_filenames_by_city:
 features = pd.concat(appended_features)
 
 #### Modelling
-import ipdb; ipdb.set_trace()
 sampler = RandomSearch()
 models = {
     CNN: sampler.sample_cnn,
@@ -71,7 +71,6 @@ train_data_upsampled = data_stream._upsample_class_proportion(train_data, class_
 test_patches = list(set(unique_patches) - set(train_patches))
 test_data = features.loc[features.index.get_level_values('patch_id').isin(test_patches)]
 
-import ipdb; ipdb.set_trace()
 train_indices = data_stream._get_index_generator(train_data_upsampled, batch_size)
 test_indices = data_stream._get_index_generator(test_data, test_batch_size)
 train_generator = data_stream.get_train_data_generator_from_index(
@@ -93,6 +92,8 @@ num_batches = len(train_indices)
 num_batches_test = len(test_indices)
 #Validate
 for space in spaces:
+    space['epochs'] = 1
+    space['convolutional_layers'] = space['convolutional_layers'][:2]
     space['batch_size'] = batch_size
     space['prop_1_to_0'] = class_proportion[1]
     space['prop_1_train'] = train_data['destroyed'].mean()
@@ -125,7 +126,12 @@ for space in spaces:
         json.dump(str(losses), f)
     if 'val_recall_positives' in losses.keys():
         if losses['val_recall_positives'][-1] > 0.4 and losses['val_precision_positives'][-1] > 0.1:
-            test_data[['destroyed']].to_pickle(
-                '{}/test_{}.p'.format(FEATURES_PATH, identifier)
+            predictions_to_store = test_data.drop('image', axis=1).copy()
+            predictions_to_store['prediction'] = model.predict_generator(
+                test_generator,
+                steps=num_batches_test
+            )
+            predictions_to_store.to_pickle(
+                '{}/test_set_{}.p'.format(PREDICTIONS_PATH, identifier)
             )
             model.save('logs/models/model_{}.h5'.format(identifier))
