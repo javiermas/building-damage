@@ -56,7 +56,7 @@ augment_flip = random.choice([False])
 class_proportion = {
     1: .3
 }
-spaces = sample_func(10)
+spaces = sample_func(500)
 batch_size = spaces[0]['batch_size']
 test_batch_size = 200
 train_proportion = 0.7
@@ -94,11 +94,9 @@ num_batches = len(train_indices)
 num_batches_test = len(test_indices)
 #Validate
 for space in spaces:
-    space['epochs'] = 1
-    space['convolutional_layers'] = space['convolutional_layers'][:2]
     space['batch_size'] = batch_size
     space['prop_1_to_0'] = class_proportion[1]
-    space['prop_1_train'] = train_data['destroyed'].mean()
+    space['prop_1_train'] = train_data_upsampled['destroyed'].mean()
     class_weight_0 = max(class_proportion[1] * space['class_weight'], 0.1)
     class_weight_1 = min((1 - (class_proportion[1] * space['class_weight'])), 0.9)
     space['class_weight'] = {
