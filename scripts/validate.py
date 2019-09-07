@@ -2,7 +2,6 @@ import os
 import random
 import argparse
 import json
-import pickle
 from time import time
 import pandas as pd
 import numpy as np
@@ -25,6 +24,7 @@ os.environ['CUDA_VISIBLE_DEVICES'] = args.get('gpu', None) or '5'
 RESULTS_PATH = 'logs/experiments'
 FEATURES_PATH = 'logs/features'
 PREDICTIONS_PATH = 'logs/predictions'
+TEST_MODE = os.environ.get('SYRIA_TEST', False)
 features_file_name = args.get('features')
 list_feature_filenames_by_city = features_file_name.split(',')
 
@@ -32,13 +32,12 @@ appended_features = []
 for city_feature_filename in list_feature_filenames_by_city:
     # Reading
     features_city = pd.read_pickle('{}/{}'.format(FEATURES_PATH, city_feature_filename)).dropna(subset=['destroyed'])
-    '''
-    features_destroyed = features_city.loc[features_city['destroyed'] == 1]\
-        .sample(20, replace=True)
-    features_non_destroyed = features_city.loc[features_city['destroyed'] == 0]\
-        .sample(2000, replace=True)
-    features_city = pd.concat([features_destroyed, features_non_destroyed])
-    '''
+    if TEST_MODE:
+        features_destroyed = features_city.loc[features_city['destroyed'] == 1]\
+            .sample(20, replace=True)
+        features_non_destroyed = features_city.loc[features_city['destroyed'] == 0]\
+            .sample(2000, replace=True)
+        features_city = pd.concat([features_destroyed, features_non_destroyed])
     appended_features.append(features_city)
 
 features = pd.concat(appended_features)
@@ -94,6 +93,11 @@ num_batches = len(train_indices)
 num_batches_test = len(test_indices)
 #Validate
 for space in spaces:
+    if TEST_MODE:
+        space['epochs'] = 1
+        space['convolutional_layers'] = space['convolutional_layers'][:1]
+        space['dense_units'] = 16
+
     space['batch_size'] = batch_size
     space['prop_1_to_0'] = class_proportion[1]
     space['prop_1_train'] = train_data_upsampled['destroyed'].mean()
@@ -126,14 +130,17 @@ for space in spaces:
     with open('{}/experiment_{}.json'.format(RESULTS_PATH, identifier), 'w') as f:
         json.dump(str(losses), f)
         print('Experiemnt saved in experiment_{}.json'.format(identifier))
-    if 'val_recall_positives' in losses.keys():
-        if losses['val_recall_positives'][-1] > 0.4 and losses['val_precision_positives'][-1] > 0.1:
-            predictions_to_store = test_data.drop('image', axis=1).copy()
-            predictions_to_store['prediction'] = model.predict_generator(
-                test_generator,
-                steps=num_batches_test
-            )
-            predictions_to_store.to_pickle(
-                '{}/test_set_{}.p'.format(PREDICTIONS_PATH, identifier)
-            )
-            model.save('logs/models/model_{}.h5'.format(identifier))
+
+    high_recall = losses.get('val_recall_positives', [0])[-1] > 0.4
+    high_precision = losses.get('val_precision_positives', [0])[-1] > 0.1
+    if high_recall and high_precision:
+        test_indices = [i for batch in test_indices for i in batch]
+        predictions_to_store = test_data.iloc[test_indices].drop('image', axis=1).copy()
+        predictions_to_store['prediction'] = model.predict_generator(
+            test_generator,
+            steps=num_batches_test
+        )
+        predictions_to_store.to_pickle(
+            '{}/test_set_{}.p'.format(PREDICTIONS_PATH, identifier)
+        )
+        model.save('logs/models/model_{}.h5'.format(identifier))
