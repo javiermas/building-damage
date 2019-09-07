@@ -1,5 +1,4 @@
 from math import ceil
-from PIL import Image, ImageEnhance
 import random
 import numpy as np
 import pandas as pd
