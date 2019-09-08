@@ -38,6 +38,17 @@ for city_feature_filename in list_feature_filenames_by_city:
         features_non_destroyed = features_city.loc[features_city['destroyed'] == 0]\
             .sample(2000, replace=True)
         features_city = pd.concat([features_destroyed, features_non_destroyed])
+    elif len(list_feature_filenames_by_city) > 1:
+        features_destroyed = features_city.loc[features_city['destroyed'] == 1]
+        features_destroyed = features_destroyed.sample(
+            int(len(features_destroyed)*0.3)
+        )
+        features_non_destroyed = features_city.loc[features_city['destroyed'] == 0]
+        features_destroyed = features_non_destroyed.sample(
+            int(len(features_non_destroyed)*0.3)
+        )
+        features_city = pd.concat([features_destroyed, features_non_destroyed])
+
     appended_features.append(features_city)
 
 features = pd.concat(appended_features)
