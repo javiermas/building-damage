@@ -19,7 +19,7 @@ class RandomSearch:
         kernel_size = random.choice([3, 5, 7, 9])
         pool_size = kernel_size-1
         dropout = random.choice(np.linspace(0.1, 0.8, 10))
-        activation = random.choice(['sigmoid']) # ReLU has shown much better performance
+        activation = random.choice(['relu', 'sigmoid']) # ReLU has shown much better performance
         for _ in range(num_layers):
             filters = filters*2
             layer = {
@@ -48,7 +48,7 @@ class RandomSearch:
             'convolutional_layers': convolutional_layers,
             'epochs': random.choice(range(5, 15)),
             'layer_type': random.choice(['cnn']),
-            'class_weight': random.choice(np.linspace(0.6, 1.4)),
+            'class_weight': random.choice(np.linspace(0.3, 1.6)),
             'learning_rate': random.choice(np.geomspace(1e-3, 1)),
         }
 
@@ -63,7 +63,7 @@ class RandomSearch:
             'learning_rate': random.choice(np.geomspace(1e-3, 1)),
             'batch_size': random.choice(range(25, 50)),
             'epochs': random.choice(range(5, 15)),
-            'class_weight': random.choice(np.linspace(0.6, 1.4)),
+            'class_weight': random.choice(np.linspace(0.3, 1.6)),
             'convolutional_layers': convolutional_layers,
         }
         return space
