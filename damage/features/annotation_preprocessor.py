@@ -18,6 +18,9 @@ class AnnotationPreprocessor(Preprocessor):
             value['city'] = value['city'].str.lower().apply(lambda x: x.split(' ')[0])
             if 'Damascus' in key:
                 value['city'] = 'damascus'
+            elif 'Deir' in key:
+                value['city'] = 'deir-ez-zor'
+
             assert value['city'].nunique() == 1
             city = value['city'].unique()[0]
             raster_key = [key for key in data.keys() if 'raster' in key and city in key][0]
