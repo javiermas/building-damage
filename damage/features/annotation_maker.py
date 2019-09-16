@@ -68,6 +68,7 @@ class AnnotationMaker(Feature):
 
     def _combine_annotations_with_raster_dates(self, annotation_data, raster_data):
         annotation_dates = annotation_data.index.get_level_values('date').unique().tolist()
+        self.last_annotation_date = max(annotation_dates) # Super hack 
         cities = raster_data.index.get_level_values('city').unique()
         date_mappings = []
         for city in cities:
@@ -90,7 +91,7 @@ class AnnotationMaker(Feature):
         annotations_by_gap = self._get_long_and_short_gap_annotations(raster_dates_with_annotation_data)
         annotations_long_gap, annotations_short_gap = annotations_by_gap
         # Pandas seems to have a bug that changes the dtype of
-        # a date column to datetime automatically when assigning to index
+        # a date column to datetime automatically when assigning to index
         raster_index = pd.DataFrame(
             raster_data.index.tolist(),
             columns=raster_data.index.names
@@ -137,10 +138,6 @@ class AnnotationMaker(Feature):
         annotations_short_gap,
         raster_data
         ):
-        last_annotation = pd.concat([
-            annotations_long_gap['annotation_date'],
-            annotations_short_gap['annotation_date']
-        ]).max()
         raster_short_gap = raster_data.loc[raster_data['date'].isin(annotations_short_gap['date'].unique())]
         raster_long_gap = raster_data.loc[raster_data['date'].isin(annotations_long_gap['date'].unique())]
         # We take all raster data from the short gap ones, so we can fill it with 0 (no destruction).
@@ -158,7 +155,7 @@ class AnnotationMaker(Feature):
         # In case there are no ground truth sets after some rasters, we fill the raster
         # that is closest to the last annotation with 0s so they can be carried back
         closest_previous_date = self._get_closest_previous_date(
-            last_annotation, annotation_data['date'].unique())
+            self.last_annotation_date, annotation_data['date'].unique())
         annotation_data.loc[
             (annotation_data['date'] == closest_previous_date)
             & (annotation_data['damage_num'].isnull()),
