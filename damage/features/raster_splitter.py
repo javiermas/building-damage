@@ -72,7 +72,7 @@ class RasterSplitter(Feature):
                     populated_areas['NAME_EN'].str.lower() == city
             ]
         if populated_areas_city.empty:
-            raise Exception(f'No populated areas for city {city}')
+            raise Exception('No populated areas for city {}'.format(city))
         populated_areas_geometry = populated_areas_city['geometry'].tolist()
         populated_areas_polygon = MultiPolygon(populated_areas_geometry).buffer(0)
         return no_analysis_areas_polygon, populated_areas_polygon
