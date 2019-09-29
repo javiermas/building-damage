@@ -72,7 +72,7 @@ space, identifier = best_experiment['space'], best_experiment['id']
 RUNS = 50
 for run in range(RUNS):
     class_proportion = {
-        1: .3
+        1: 0.3
     }
     test_batch_size = 200
     train_proportion = 0.7
@@ -113,7 +113,7 @@ for run in range(RUNS):
         space['epochs'] = 1
         space['convolutional_layers'] = space['convolutional_layers'][:1]
         space['dense_units'] = 16
-
+    
     space['prop_1_train'] = train_data_upsampled['destroyed'].mean()
     class_weight_0 = max(class_proportion[1] * space['class_weight'][0], 0.1)
     class_weight_1 = min((1 - (class_proportion[1] * space['class_weight'][1])), 0.9)
@@ -156,8 +156,8 @@ for run in range(RUNS):
     predictions_to_store.to_pickle(
         '{}/test_set_{}.p'.format(PREDICTIONS_PATH, identifier)
     )
-    high_recall = losses.get('recall_val', [0]) > 0.4
-    high_precision = losses.get('precision_val', [0]) > 0.1
+    high_recall = losses.get('recall_val', [0]) > 0.35
+    high_precision = losses.get('precision_val', [0]) > 0.08
     with open('{}/experiment_{}.json'.format(RESULTS_PATH, identifier), 'w') as f:
         json.dump(str(losses), f)
         print('Experiemnt saved in experiment_{}.json'.format(identifier))
