@@ -19,6 +19,14 @@ DATA_SOURCES = {
             'aleppo_2016_03_29_zoom_19.tif',
             'aleppo_2016_09_18_zoom_19.tif',
             'aleppo_2016_10_19_zoom_19.tif',
+            'aleppo_2016_11_03_zoom_19.tif',
+            'aleppo_2015_12_11_zoom_19.tif',
+            'aleppo_2014_11_07_zoom_19.tif',
+            'aleppo_2014_01_31_zoom_19.tif',
+            'aleppo_2016_08_03_zoom_19.tif',
+            'aleppo_2017_02_20_zoom_19.tif',
+            'aleppo_2016_07_09_zoom_19.tif',
+            'aleppo_2016_04_06_zoom_19.tif',
         ],
         'no_analysis': [
             '5_No_Analysis_Areas_Aleppo.shp',
@@ -29,12 +37,17 @@ DATA_SOURCES = {
             '4_Damage_Sites_Daraa_CDA.shp',
         ],
         'rasters': [
-            'daraa_2011_10_17_zoom_19.tif',
-            'daraa_2013_11_10_zoom_19.tif',
-            'daraa_2014_05_01_zoom_19.tif',
-            'daraa_2016_02_25_zoom_19.tif',
-            'daraa_2016_04_19_zoom_19.tif',
-            'daraa_2017_02_07_zoom_19.tif',
+            "daraa_2011_08_22_zoom_19.tif",
+            "daraa_2011_10_17_zoom_19.tif",
+            "daraa_2012_09_06_zoom_19.tif",
+            "daraa_2013_11_10_zoom_19.tif",
+            "daraa_2014_05_01_zoom_19.tif",
+            "daraa_2016_02_25_zoom_19.tif",
+            "daraa_2016_04_19_zoom_19.tif",
+            "daraa_2016_12_05_zoom_19.tif",
+            "daraa_2017_02_07_zoom_19.tif",
+            "daraa_2017_06_02_zoom_19.tif",
+            "daraa_2017_10_03_zoom_19.tif"
         ],
         'no_analysis': [
             '5_No_Analysis_Areas_Daraa.shp',
@@ -100,22 +113,29 @@ DATA_SOURCES = {
             '4_Damage_Sites_Idlib_CDA.shp',
         ],
         'rasters': [
-            'idlib_2011_07_31_zoom_19.tif',
-            'idlib_2014_02_07_zoom_19.tif',
-            'idlib_2014_05_31_zoom_19.tif',
-            'idlib_2016_08_01_zoom_19.tif',
+            "idlib_2011_07_31_zoom_19.tif",
+            "idlib_2012_06_14_zoom_19.tif",
+            "idlib_2014_02_07_zoom_19.tif",
+            "idlib_2014_05_31_zoom_19.tif",
+            "idlib_2015_08_19_zoom_19.tif",
+            "idlib_2016_06_01_zoom_19.tif",
+            "idlib_2016_08_01_zoom_19.tif",
+            "idlib_2017_02_21_zoom_19.tif",
+            "idlib_2017_07_17_zoom_19.tif"
         ],
         'no_analysis': [
             '5_No_Analysis_Areas_Idlib.shp',
         ],
     },
-    'deir': {
+    'deir-ez-zor': {
         'annotations': [
             '4_Damage_Sites_Deir-ez-Zor_CDA.shp',
         ],
         'rasters': [
-            'deir-ez-zor_2016_05_25_zoom_19.tif',
-            'deir-ez-zor_2012_12_05_zoom_19.tif',
+            "deir-ez-zor_2012_12_05_zoom_19.tif",
+            "deir-ez-zor_2013_10_24_zoom_19.tif",
+            "deir-ez-zor_2014_09_16_zoom_19.tif",
+            "deir-ez-zor_2016_05_25_zoom_19.tif"
         ],
         'no_analysis': [
             '5_No_Analysis_Areas_Deir-ez-Zor.shp',
