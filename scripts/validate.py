@@ -25,6 +25,7 @@ RESULTS_PATH = 'logs/experiments'
 FEATURES_PATH = 'logs/features'
 PREDICTIONS_PATH = 'logs/predictions'
 TEST_MODE = os.environ.get('SYRIA_TEST', False)
+SAMPLE_CITY = 1
 features_file_name = args.get('features')
 list_feature_filenames_by_city = features_file_name.split(',')
 
@@ -38,14 +39,14 @@ for city_feature_filename in list_feature_filenames_by_city:
         features_non_destroyed = features_city.loc[features_city['destroyed'] == 0]\
             .sample(2000, replace=True)
         features_city = pd.concat([features_destroyed, features_non_destroyed])
-    elif len(list_feature_filenames_by_city) > 1:
+    elif SAMPLE_CITY < 1:
         features_destroyed = features_city.loc[features_city['destroyed'] == 1]
         features_destroyed = features_destroyed.sample(
-            int(len(features_destroyed)*0.3)
+            int(len(features_destroyed)*SAMPLE_CITY)
         )
         features_non_destroyed = features_city.loc[features_city['destroyed'] == 0]
         features_destroyed = features_non_destroyed.sample(
-            int(len(features_non_destroyed)*0.3)
+            int(len(features_non_destroyed)*SAMPLE_CITY)
         )
         features_city = pd.concat([features_destroyed, features_non_destroyed])
 
@@ -53,7 +54,7 @@ for city_feature_filename in list_feature_filenames_by_city:
 
 features = pd.concat(appended_features)
 
-#### Modelling
+#### Modelling
 sampler = RandomSearch()
 models = {
     CNN: sampler.sample_cnn,
