@@ -166,10 +166,20 @@ class AnnotationMaker(Feature):
             .groupby(['city', 'patch_id'])['damage_num']\
             .bfill()
         # If we couldnt match the annotations with the raster, then the annotation date
-        # will be missing (non-destroyed ones)
+        # will be missing, we don't want to carry back the 3s in that case, so we set them
+        # as nan
         annotation_data.loc[
             (annotation_data['annotation_date'].isnull())
              & (annotation_data['damage_num_filled'] == 3),
+            'damage_num_filled'
+        ] = np.nan
+        # We want to carry back all damage that doesnt include destruction but
+        # we dont want to carry forward any damage that doesnt include destruction
+        # (except for the short gap annotations)
+        annotation_data.loc[
+            ((annotation_data['date'] - annotation_data['annotation_date'])\
+             > self.time_to_annotation_threshold)
+            & (annotation_data['damage_num_filled'].isin([0, 1, 2])),
             'damage_num_filled'
         ] = np.nan
         annotation_data = annotation_data\
