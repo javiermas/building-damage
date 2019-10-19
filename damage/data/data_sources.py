@@ -4,11 +4,12 @@ DATA_SOURCES = {
             '6_Damage_Sites_Aleppo_SDA.shp',
         ],
         'rasters': [
-            'aleppo_2011_06_26_zoom_19.tif',
+            #'aleppo_2011_01_01_zoom_19.tif',
+            'aleppo_2011_06_26_zoom_19.tif', # Too bright for prewar
             'aleppo_2013_05_26_zoom_19.tif',
             'aleppo_2013_09_23_zoom_19.tif',
             'aleppo_2013_10_31_zoom_19.tif',
-            'aleppo_2014_05_23_zoom_19.tif',
+            #'aleppo_2014_05_23_zoom_19.tif', # Cloudy
             'aleppo_2014_07_14_zoom_19.tif',
             'aleppo_2014_10_22_zoom_19.tif',
             'aleppo_2014_12_15_zoom_19.tif',
@@ -21,7 +22,7 @@ DATA_SOURCES = {
             'aleppo_2016_10_19_zoom_19.tif',
             'aleppo_2016_11_03_zoom_19.tif',
             'aleppo_2015_12_11_zoom_19.tif',
-            'aleppo_2014_11_07_zoom_19.tif',
+            #'aleppo_2014_11_07_zoom_19.tif', # Corrupted
             'aleppo_2014_01_31_zoom_19.tif',
             'aleppo_2016_08_03_zoom_19.tif',
             'aleppo_2017_02_20_zoom_19.tif',
