@@ -10,7 +10,9 @@ from tests.utils import assertFrameEqual
 class TestAnnotationMaker(unittest.TestCase):
 
     def setUp(self):
-        self.annotation_maker = AnnotationMaker()
+        patch_size = 64
+        time_to_annotation_threshold = timedelta(weeks=1)
+        self.annotation_maker = AnnotationMaker(patch_size, time_to_annotation_threshold)
 
     def test_combine_annotation_data(self):
         city_a_data = pd.DataFrame({
@@ -32,6 +34,69 @@ class TestAnnotationMaker(unittest.TestCase):
         output = self.annotation_maker._combine_annotation_data(annotation_data)
         assertFrameEqual(output, expected_output)
 
+    def test_combine_annotations_and_rasters(self):
+        annotation_data = pd.DataFrame({
+            'city': ['a', 'a'],
+            'patch_id': ['1', '2'],
+            'date': [
+                date(2017, 5, 20),
+                date(2017, 5, 20),
+            ],
+            'damage_num': [1, 3],
+        }).set_index(['city', 'patch_id', 'date'])
+        raster_data = pd.DataFrame({
+            'city': ['a'] * 9,
+            'patch_id': ['1', '2', '3', '1', '2', '3', '1', '2', '3'],
+            'date': [
+                date(2016, 5, 20),
+                date(2016, 5, 20),
+                date(2016, 5, 20),
+                date(2017, 5, 20),
+                date(2017, 5, 20),
+                date(2017, 5, 20),
+                date(2018, 5, 20),
+                date(2018, 5, 20),
+                date(2018, 5, 20),
+            ],
+            'image': [f'image_{i}' for i in range(9)],
+        }).set_index(['city', 'patch_id', 'date'])
+        expected_output = pd.DataFrame({
+            'city': ['a'] * 9,
+            'patch_id': ['1', '2', '3', '1', '2', '3', '1', '2', '3'],
+            'date': [
+                date(2016, 5, 20),
+                date(2016, 5, 20),
+                date(2016, 5, 20),
+                date(2017, 5, 20),
+                date(2017, 5, 20),
+                date(2017, 5, 20),
+                date(2018, 5, 20),
+                date(2018, 5, 20),
+                date(2018, 5, 20),
+            ],
+            'annotation_date': [
+                np.nan,
+                np.nan,
+                np.nan,
+                date(2017, 5, 20),
+                date(2017, 5, 20),
+                date(2017, 5, 20),
+                np.nan,
+                np.nan,
+                np.nan,
+            ],
+            'destroyed': [0, np.nan, 0, 0, 1, 0, np.nan, 1, np.nan],
+            'image': [f'image_{i}' for i in range(9)],
+        }).sort_values(['city', 'patch_id', 'date'])
+        expected_output['annotation_date'] = pd.to_datetime(expected_output['annotation_date'])
+        expected_output['date'] = pd.to_datetime(expected_output['date'])
+        output = self.annotation_maker._combine_annotations_and_rasters(
+            annotation_data,
+            raster_data
+        )
+        assertFrameEqual(output, expected_output)
+
+    '''
     def test_is_date_previous_or_same_to_date_previous_date(self):
         date_0, date_1 = date(2016, 1, 1), date(2016, 1, 2)
         output = self.annotation_maker._is_date_previous_or_same_to_date(date_0, date_1)
@@ -72,12 +137,11 @@ class TestAnnotationMaker(unittest.TestCase):
     def test_get_long_and_short_gap_annotations(self):
         annotation_data = pd.DataFrame({
             'city': ['a'] * 2,
-            'date': [date(2016, 2, 1), date(2017, 9, 1)],
+            'date': [date(2016, 1, 5), date(2017, 9, 1)],
             'annotation_date': [date(2016, 1, 1), date(2017, 1, 1)],
             'damage': [1, 1],
         })
-        threshold = timedelta(days=30*6)
-        output = self.annotation_maker._get_long_and_short_gap_annotations(annotation_data, threshold)
+        output = self.annotation_maker._get_long_and_short_gap_annotations(annotation_data)
         expected_output_0 = pd.DataFrame({
             'city': ['a'],
             'date': [date(2017, 9, 1)],
@@ -86,42 +150,42 @@ class TestAnnotationMaker(unittest.TestCase):
         })
         expected_output_1 = pd.DataFrame({
             'city': ['a'],
-            'date': [date(2016, 2, 1)],
+            'date': [date(2016, 1, 5)],
             'annotation_date': [date(2016, 1, 1)],
             'damage': [1],
         })
         assertFrameEqual(output[0], expected_output_0)
         assertFrameEqual(output[1], expected_output_1)
     
-    def test_combine_long_and_short_gap_annotations_with_raster_data(self):
+    def test_combine_long_and_short_gap_annotations_with_raster_data_happy_path(self):
         short_gap = pd.DataFrame({
             'city': ['a']*2,
-            'date': [date(2016, 2, 1), date(2016, 2, 1)],
+            'date': [date(2016, 1, 5), date(2016, 1, 5)],
             'annotation_date': [date(2016, 1, 1), date(2016, 1, 1)],
-            'location_index': [1, 2],
+            'patch_id': ['a', 'b'],
             'damage_num': [1, 1],
         })
         long_gap = pd.DataFrame({
             'city': ['a']*2,
             'date': [date(2017, 9, 1), date(2017, 9, 1)],
             'annotation_date': [date(2017, 1, 1), date(2017, 1, 1)],
-            'location_index': [0, 1],
-            'damage_num': [1, 1],
+            'patch_id': ['a', 'b'],
+            'damage_num': [1, 3],
         })
         raster_data = pd.DataFrame({
             'city': ['a']*4,
-            'date': [date(2016, 2, 1), date(2016, 2, 1), date(2017, 9, 1), date(2017, 9, 1)],
-            'location_index': [1, 3, 1, 2],
+            'date': [date(2016, 1, 5), date(2016, 1, 5), date(2017, 9, 1), date(2017, 9, 1)],
             'patch_id': ['a', 'b', 'a', 'b'],
         })
         expected_output = pd.DataFrame({
-            'city': ['a']*3,
-            'date': [date(2016, 2, 1), date(2016, 2, 1), date(2017, 9, 1)],
-            'annotation_date': [date(2016, 1, 1), np.nan, date(2017, 1, 1)],
-            'location_index': [1, 3, 1],
-            'damage_num': [1., 0., 1.],
-            'patch_id': ['a', 'b', 'a'],
-        })
+            'city': ['a']*4,
+            'date': [date(2016, 1, 5), date(2016, 1, 5), date(2017, 9, 1), date(2017, 9, 1)],
+            'annotation_date': [date(2016, 1, 1), date(2016, 1, 1),
+                                date(2017, 1, 1), date(2017, 1, 1)],
+            'patch_id': ['a', 'b', 'a', 'b'],
+            'damage_num': [1., 1., np.nan, 3.],
+        }).sort_values('patch_id')
+        self.annotation_maker.last_annotation_date = date(2017, 1, 1)
         output = self.annotation_maker._combine_long_and_short_gap_annotations_with_raster_data(
             long_gap,
             short_gap,
@@ -129,56 +193,41 @@ class TestAnnotationMaker(unittest.TestCase):
         )
         assertFrameEqual(output, expected_output)
 
-
-    """
-    def test_make_single_raster_pair_expected_input_returns_expected_output(self):
-        first_raster = pd.DataFrame({
-            'location_index': [0],
-            'SensDt': [date(2017, 1, 1)],
-            'date': ['a'],
+    def test_combine_long_and_short_gap_annotations_with_raster_data_case_0(self):
+        short_gap = pd.DataFrame({
+            'city': ['a']*2,
+            'date': [date(2016, 1, 5), date(2016, 1, 5)],
+            'annotation_date': [date(2016, 1, 1), date(2016, 1, 1)],
+            'patch_id': ['a', 'b'],
+            'damage_num': [0, 3],
         })
-        previous_raster = pd.DataFrame({
-            'location_index': [0],
-            'image': [np.array([[[1, 1, 1], [1, 1, 1], [1, 1, 1]]])],
-            'date': ['b'],
+        long_gap = pd.DataFrame({
+            'city': ['a']*4,
+            'date': [date(2015, 1, 5), date(2015, 1, 5),
+                     date(2017, 1, 5), date(2017, 1, 5)],
+            'annotation_date': [np.nan, np.nan,
+                                date(2016, 1, 1), date(2016, 1, 1)]
+            'patch_id': ['a', 'a', 'b', 'b'],
+            'damage_num': [1, 3],
         })
-        raster_pair = self.annotation_maker._make_single_raster_pair(first_raster, previous_raster)
-        expected_output = pd.DataFrame({
-            'location_index': [0],
-            'image': [np.array([[[1, 1, 1, 0, 0, 0], [1, 1, 1, 0, 0, 0], [1, 1, 1, 0, 0, 0]]])],
-            'date': ['b'],
-        })
-        assertFrameEqual(raster_pair, expected_output)
-
-    def test_make_raster_pairs_single_city_expected_input_returns_expected_output(self):
         raster_data = pd.DataFrame({
-            'location_index': [0, 0],
-            'image': [np.array([[[0, 0, 0], [0, 0, 0], [0, 0, 0]]]),
-                      np.array([[[1, 1, 1], [1, 1, 1], [1, 1, 1]]])],
-            'date': [date(2017, 1, 1), date(2018, 1, 1)],
+            'city': ['a']*4,
+            'date': [date(2016, 1, 5), date(2016, 1, 5), date(2017, 9, 1), date(2017, 9, 1)],
+            'patch_id': ['a', 'b', 'a', 'b'],
         })
-        output = self.annotation_maker._make_raster_pairs_single_city(raster_data)
         expected_output = pd.DataFrame({
-            'location_index': [0],
-            'image': [np.array([[[1, 1, 1, 0, 0, 0], [1, 1, 1, 0, 0, 0], [1, 1, 1, 0, 0, 0]]])],
-            'date': [date(2018, 1, 1)],
-        })
-        assertFrameEqual(output, expected_output) 
-
-    def test_make_raster_pairs_multiple_cities_expected_input_returns_expected_output(self):
-        raster_data = pd.DataFrame({
-            'location_index': [0, 0],
-            'image': [np.array([[[0, 0, 0], [0, 0, 0], [0, 0, 0]]]),
-                      np.array([[[1, 1, 1], [1, 1, 1], [1, 1, 1]]])],
-            'date': [date(2017, 1, 1), date(2018, 1, 1)],
-            'city': ['a', 'a'],
-        })
-        output = self.annotation_maker._make_raster_pairs_all_cities(raster_data)
-        expected_output = pd.DataFrame({
-            'location_index': [0],
-            'image': [np.array([[[1, 1, 1, 0, 0, 0], [1, 1, 1, 0, 0, 0], [1, 1, 1, 0, 0, 0]]])],
-            'date': [date(2018, 1, 1)],
-            'city': ['a'],
-        })
+            'city': ['a']*4,
+            'date': [date(2016, 1, 5), date(2016, 1, 5), date(2017, 9, 1), date(2017, 9, 1)],
+            'annotation_date': [date(2016, 1, 1), date(2016, 1, 1),
+                                date(2017, 1, 1), date(2017, 1, 1)],
+            'patch_id': ['a', 'b', 'a', 'b'],
+            'damage_num': [1., 1., np.nan, 3.],
+        }).sort_values('patch_id')
+        self.annotation_maker.last_annotation_date = date(2017, 1, 1)
+        output = self.annotation_maker._combine_long_and_short_gap_annotations_with_raster_data(
+            long_gap,
+            short_gap,
+            raster_data
+        )
         assertFrameEqual(output, expected_output)
-    """
+    '''

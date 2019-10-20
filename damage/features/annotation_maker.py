@@ -1,4 +1,6 @@
 from datetime import timedelta
+import math
+import itertools
 import pandas as pd
 import numpy as np
 
@@ -17,18 +19,89 @@ class AnnotationMaker(Feature):
         annotation_data = self._combine_annotation_data(annotation_data)
         annotation_data = self._assign_patch_id_to_annotation(annotation_data, data)
         annotation_data = self._group_annotations_by_patch_id(annotation_data)
-        annotation_data = self._combine_annotations_with_raster_dates(annotation_data, data['RasterSplitter'])
-        annotation_data['destroyed'] = annotation_data['damage_num'].apply(self._damage_to_destruction)
+        annotation_data = self._combine_annotations_and_rasters(
+            annotation_data,
+            data['RasterSplitter']
+        )
         return annotation_data.set_index(['city', 'patch_id', 'date'])
+
+    def _combine_annotations_and_rasters(self, annotation_data, raster_data):
+        annotation_data, raster_data = self.reformat_annotations_and_rasters(
+            annotation_data,
+            raster_data
+        )
+        annotation_and_raster_data = pd.merge(
+            annotation_data,
+            raster_data,
+            left_on=['city', 'patch_id', 'annotation_date'],
+            right_on=['city', 'patch_id', 'raster_date'],
+            how='outer',
+        ).sort_values(['city', 'patch_id', 'raster_date'])
+        raster_is_close_to_annotation = (
+            annotation_and_raster_data['raster_date']
+            - annotation_and_raster_data['annotation_date']
+        ) <= self.time_to_annotation_threshold
+        annotation_is_not_destroyed = annotation_and_raster_data['damage_num'] != 3
+        annotation_and_raster_data['damage_0'] = np.nan
+        annotation_and_raster_data.loc[
+            raster_is_close_to_annotation
+            & annotation_is_not_destroyed,
+        'damage_0'] = True
+        annotation_and_raster_data['damage_3'] = np.nan
+        annotation_and_raster_data.loc[
+            annotation_and_raster_data['damage_num'] == 3,
+        'damage_3'] = True
+        annotation_and_raster_data['damage_3'] = annotation_and_raster_data\
+            .groupby(['city', 'patch_id'])['damage_3']\
+            .ffill()
+        annotation_and_raster_data['damage_0'] = annotation_and_raster_data\
+            .groupby(['city', 'patch_id'])['damage_0']\
+            .bfill()
+        annotation_and_raster_data['destroyed'] = annotation_and_raster_data\
+            .apply(self._damage_to_destruction, axis=1)
+        annotation_and_raster_data = annotation_and_raster_data\
+            .drop(columns=['damage_0', 'damage_3', 'damage_num'])\
+            .rename(columns={'raster_date': 'date'})
+        return annotation_and_raster_data.dropna(subset=['image'])
     
-    @staticmethod  
-    def _damage_to_destruction(damage_num):
-        if np.isnan(damage_num):
-            return np.nan 
-        elif damage_num == 3:
+    @staticmethod
+    def _damage_to_destruction(x):
+        if x['damage_3'] == True:
             return 1
+        elif math.isnan(x['damage_0']):
+            return x['damage_0']
         else:
             return 0
+    
+    @staticmethod
+    def _add_non_destroyed_annotations(annotation_data, unique_patches):
+        unique_dates = annotation_data['annotation_date'].unique()
+        all_combinations = pd.DataFrame(
+            list(itertools.product(unique_dates, unique_patches)),
+            columns=['annotation_date', 'patch_id']
+        )
+        annotation_data = pd.merge(
+            all_combinations,
+            annotation_data,
+            how='left',
+        )
+        annotation_data['damage_num'] = annotation_data['damage_num'].fillna(0)
+        annotation_data['city'] = annotation_data['city'].dropna().unique()[0]
+        return annotation_data
+
+
+    def reformat_annotations_and_rasters(self, annotation_data, raster_data):
+        annotation_data = annotation_data.reset_index().rename(columns={
+            'date': 'annotation_date',
+        })
+        raster_data = raster_data.reset_index().rename(columns={
+            'date': 'raster_date',
+        })
+        annotation_data['annotation_date'] = pd.to_datetime(annotation_data['annotation_date'])
+        raster_data['raster_date'] = pd.to_datetime(raster_data['raster_date'])
+        unique_patches = raster_data['patch_id'].unique()
+        annotation_data = self._add_non_destroyed_annotations(annotation_data, unique_patches)
+        return annotation_data, raster_data
 
     @staticmethod
     def _combine_annotation_data(annotation_data):
@@ -40,12 +113,8 @@ class AnnotationMaker(Feature):
         return annotation_data
 
     @staticmethod
-    def _group_annotations_by_location_index(annotation_data):
-        return annotation_data.groupby(['city', 'location_index', 'date'])['damage_num'].max()
-
-    @staticmethod
     def _group_annotations_by_patch_id(annotation_data):
-        return annotation_data.groupby(['city', 'patch_id', 'date'])['damage_num'].max()
+        return annotation_data.groupby(['city', 'patch_id', 'date'])[['damage_num']].max()
 
     def _assign_patch_id_to_annotation(self, annotation_data, data):
         annotation_data_with_patch_id = []
