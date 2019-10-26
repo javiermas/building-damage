@@ -37,20 +37,13 @@ class AnnotationMaker(Feature):
             right_on=['city', 'patch_id', 'raster_date'],
             how='outer',
         ).sort_values(['city', 'patch_id', 'raster_date'])
-        raster_is_close_to_annotation = (
-            annotation_and_raster_data['raster_date']
-            - annotation_and_raster_data['annotation_date']
-        ) <= self.time_to_annotation_threshold
-        annotation_is_not_destroyed = annotation_and_raster_data['damage_num'] != 3
-        annotation_and_raster_data['damage_0'] = np.nan
-        annotation_and_raster_data.loc[
-            raster_is_close_to_annotation
-            & annotation_is_not_destroyed,
-        'damage_0'] = True
-        annotation_and_raster_data['damage_3'] = np.nan
-        annotation_and_raster_data.loc[
-            annotation_and_raster_data['damage_num'] == 3,
-        'damage_3'] = True
+        annotation_and_raster_data['destroyed'] = annotation_and_raster_data['damage_num']\
+            .replace([1, 2], 0)\
+            .replace(3, 1)
+        annotation_and_raster_data['damage_0'] = annotation_and_raster_data['destroyed']\
+            .apply(lambda x: np.nan if x != 0 else 1)
+        annotation_and_raster_data['damage_3'] = annotation_and_raster_data['destroyed']\
+            .apply(lambda x: np.nan if x != 1 else 1)
         annotation_and_raster_data['damage_3'] = annotation_and_raster_data\
             .groupby(['city', 'patch_id'])['damage_3']\
             .ffill()
@@ -61,17 +54,20 @@ class AnnotationMaker(Feature):
             .apply(self._damage_to_destruction, axis=1)
         annotation_and_raster_data = annotation_and_raster_data\
             .drop(columns=['damage_0', 'damage_3', 'damage_num'])\
-            .rename(columns={'raster_date': 'date'})
+            .rename(columns={'raster_date': 'date'})\
+            .reset_index(drop=True)\
+            .sort_values(['city', 'patch_id', 'date'])
         return annotation_and_raster_data.dropna(subset=['image'])
     
     @staticmethod
     def _damage_to_destruction(x):
-        if x['damage_3'] == True:
-            return 1
-        elif math.isnan(x['damage_0']):
-            return x['damage_0']
+        assert not (x['damage_3'] == 1 and x['damage_0'] == 1)
+        if x['damage_0'] == 1:
+            return 0.
+        elif x['damage_3'] == 1:
+            return 1.
         else:
-            return 0
+            return np.nan
     
     @staticmethod
     def _add_non_destroyed_annotations(annotation_data, unique_patches):
