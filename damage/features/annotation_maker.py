@@ -37,7 +37,12 @@ class AnnotationMaker(Feature):
             left_on=['city', 'patch_id', 'annotation_date'],
             right_on=['city', 'patch_id', 'raster_date'],
             how='outer',
-        ).sort_values(['city', 'patch_id', 'raster_date'])
+        )
+        annotation_and_raster_data['date'] = annotation_and_raster_data\
+            .apply(lambda x: x['raster_date'] if pd.isnull(x['annotation_date']) else x['annotation_date'], axis=1)
+        annotation_and_raster_data = annotation_and_raster_data\
+            .sort_values(['city', 'patch_id', 'date'])\
+            .reset_index(drop=True)
         annotation_and_raster_data['destroyed'] = annotation_and_raster_data['damage_num']\
             .replace([1, 2], 0)\
             .replace(3, 1)
@@ -54,7 +59,7 @@ class AnnotationMaker(Feature):
         annotation_and_raster_data['destroyed'] = annotation_and_raster_data\
             .apply(self._damage_to_destruction, axis=1)
         annotation_and_raster_data = annotation_and_raster_data\
-            .drop(columns=['damage_0', 'damage_3', 'damage_num'])\
+            .drop(columns=['damage_0', 'damage_3', 'damage_num', 'date'])\
             .rename(columns={'raster_date': 'date'})\
             .reset_index(drop=True)\
             .sort_values(['city', 'patch_id', 'date'])
@@ -62,11 +67,10 @@ class AnnotationMaker(Feature):
     
     @staticmethod
     def _damage_to_destruction(x):
-        assert not (x['damage_3'] == 1 and x['damage_0'] == 1)
-        if x['damage_0'] == 1:
-            return 0.
-        elif x['damage_3'] == 1:
+        if x['damage_3'] == 1:
             return 1.
+        elif x['damage_0'] == 1:
+            return 0.
         else:
             return np.nan
     
