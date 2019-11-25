@@ -2,11 +2,13 @@ import os
 import json
 import geopandas as gpd
 import pandas as pd
+import numpy as np
 import rasterio
 
 from damage.data.data_sources import DATA_SOURCES
 
 
+FEATURES_PATH = 'logs/features'
 RASTERS_PATH = 'data/city_rasters'
 ANNOTATIONS_PATH = 'data/annotations'
 POLYGONS_PATH = 'data/polygons'
@@ -83,4 +85,39 @@ def load_experiment_results(path=EXPERIMENTS_PATH):
             except:
                 continue
 
-    return pd.DataFrame(experiment_results)
+    experiment_results = pd.DataFrame(experiment_results)
+    experiment_results['val_precision_positives_last_epoch'] = experiment_results['val_precision_positives']\
+        .apply(lambda x: np.nan if isinstance(x, float) else x[-1])
+    experiment_results['val_recall_positives_last_epoch'] = experiment_results['val_recall_positives']\
+        .apply(lambda x: np.nan if isinstance(x, float) else x[-1])
+    return experiment_results
+
+
+def load_features_multiple_cities(self, cities, test=False, sample=1):
+    appended_features = []
+    for city_feature_filename in cities:
+        # Reading
+        features_city = pd.read_pickle('{}/{}'.format(FEATURES_PATH, city_feature_filename))\
+            .dropna(subset=['destroyed', 'image'])
+        features_city = features_city.loc[features_city['no_analysis'] == 0]
+        if test:
+            features_destroyed = features_city.loc[features_city['destroyed'] == 1]\
+                .sample(20, replace=True)
+            features_non_destroyed = features_city.loc[features_city['destroyed'] == 0]\
+                .sample(2000, replace=True)
+            features_city = pd.concat([features_destroyed, features_non_destroyed])
+        elif sample < 1:
+            features_destroyed = features_city.loc[features_city['destroyed'] == 1]
+            features_destroyed = features_destroyed.sample(
+                int(len(features_destroyed)*sample)
+            )
+            features_non_destroyed = features_city.loc[features_city['destroyed'] == 0]
+            features_destroyed = features_non_destroyed.sample(
+                int(len(features_non_destroyed)*sample)
+            )
+            features_city = pd.concat([features_destroyed, features_non_destroyed])
+
+        appended_features.append(features_city)
+
+    features = pd.concat(appended_features)
+    return features
