@@ -29,7 +29,7 @@ class RasterSplitter(Feature):
             for w in tqdm(range(self.patch_size//2, (raster.width - self.patch_size//2), self.stride)):
                 for h in range(self.patch_size//2, (raster.height - self.patch_size//2), self.stride):
                     longitude, latitude = raster.xy(h, w)
-                    point_is_valid = self._is_point_valid(
+                    point_is_valid, reason = self._is_point_valid(
                         Point(longitude, latitude),
                         populated_areas_polygon,
                         no_analysis_areas_polygon
@@ -44,6 +44,7 @@ class RasterSplitter(Feature):
                         'latitude': latitude,
                         'city': city,
                         'date': date(year=year, month=month, day=day),
+                        'no_analysis': 1 if reason else 0,
                         'patch_id': '{}-{}'.format(w, h),
                     }
                     tiles.append(tile)
@@ -80,13 +81,11 @@ class RasterSplitter(Feature):
     @staticmethod
     def _is_point_valid(point, populated_areas, no_analysis_areas):
         if not populated_areas.contains(point):
-            return False
-
+            return False, 'not_populated'
         elif no_analysis_areas.contains(point):
-            return False
-
+            return True, 'no_analysis'
         else:
-            return True
+            return True, None
 
     def _get_tile_boundaries(self, w, h):
         left = (w - self.patch_size//2)

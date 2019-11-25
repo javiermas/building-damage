@@ -23,8 +23,10 @@ class AnnotationMaker(Feature):
             annotation_data,
             data['RasterSplitter']
         )
-        return annotation_data.drop(columns=['image', 'latitude', 'longitude'])\
+        annotation_data = annotation_data\
+            .drop(columns=['image', 'latitude', 'longitude', 'no_analysis'])\
             .set_index(['city', 'patch_id', 'date'])
+        return annotation_data
 
     def _combine_annotations_and_rasters(self, annotation_data, raster_data):
         annotation_data, raster_data = self.reformat_annotations_and_rasters(
