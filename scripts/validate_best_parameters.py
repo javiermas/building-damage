@@ -6,11 +6,9 @@ from time import time
 import pandas as pd
 import numpy as np
 import tensorflow as tf
-from tensorflow.data import Dataset
-from tensorflow.errors import ResourceExhaustedError
-from keras.preprocessing.image import ImageDataGenerator
+from sklearn.metrics import roc_auc_score
 
-from damage.data import DataStream, load_experiment_results
+from damage.data import DataStream, load_experiment_results, load_features_multiple_cities
 from damage.models import CNN, RandomSearch, CNNPreTrained
 
 
@@ -26,48 +24,46 @@ FEATURES_PATH = 'logs/features'
 PREDICTIONS_PATH = 'logs/predictions'
 TEST_MODE = os.environ.get('SYRIA_TEST', False)
 features_file_name = args.get('features')
-list_feature_filenames_by_city = features_file_name.split(',')
+cities = features_file_name.split('.p,')
 
-appended_features = []
-for city_feature_filename in list_feature_filenames_by_city:
-    # Reading
-    features_city = pd.read_pickle('{}/{}'.format(FEATURES_PATH, city_feature_filename)).dropna(subset=['destroyed'])
-    if TEST_MODE:
-        features_destroyed = features_city.loc[features_city['destroyed'] == 1]\
-            .sample(20, replace=True)
-        features_non_destroyed = features_city.loc[features_city['destroyed'] == 0]\
-            .sample(2000, replace=True)
-        features_city = pd.concat([features_destroyed, features_non_destroyed])
-    elif len(list_feature_filenames_by_city) > 1:
-        features_destroyed = features_city.loc[features_city['destroyed'] == 1]
-        features_destroyed = features_destroyed.sample(
-            int(len(features_destroyed)*0.3)
-        )
-        features_non_destroyed = features_city.loc[features_city['destroyed'] == 0]
-        features_destroyed = features_non_destroyed.sample(
-            int(len(features_non_destroyed)*0.3)
-        )
-        features_city = pd.concat([features_destroyed, features_non_destroyed])
+# Loading features
+features = load_features_multiple_cities(cities, TEST_MODE)
 
-    appended_features.append(features_city)
-
-features = pd.concat(appended_features)
 # Best parameters
 Model = CNN
 experiment_results = load_experiment_results()
 experiment_results = experiment_results.loc[
     (experiment_results['model'] == str(Model))
-    & (experiment_results['features'] == features_file_name)
+    & (experiment_results['features'] == 'aleppo.p')
 ]
-experiment_results['val_precision_positives_last_epoch'] = experiment_results['val_precision_positives']\
-    .apply(lambda x: np.nan if isinstance(x, float) else x[-1])
-experiment_results['val_recall_positives_last_epoch'] = experiment_results['val_recall_positives']\
-    .apply(lambda x: np.nan if isinstance(x, float) else x[-1])
 experiment_results = experiment_results.loc[
     experiment_results['val_recall_positives_last_epoch'] > 0.5
 ]
-best_experiment = experiment_results.loc[experiment_results['val_precision_positives_last_epoch'].idxmax()]
-space, identifier = best_experiment['space'], best_experiment['id']
+if experiment_results.empty() or True:
+    space = {
+        'dense_units': 256,
+        'prop_1_to_0': 0.3,
+        'class_weight': {0: 0.1, 1: 0.7738110204081633},
+        'learning_rate': 0.868511373751352,
+        'convolutional_layers': [
+            {'dropout': 0.25555555555555554, 'pool_size': [8, 8], 'kernel_size': [9, 9],
+             'filters': 128, 'activation': 'relu'},
+            {'dropout': 0.25555555555555554, 'pool_size': [8, 8], 'kernel_size': [9, 9],
+             'filters': 256, 'activation': 'relu'}
+        ], 
+        'layer_type': 'cnn',
+        'epochs': 8, 
+        'prop_1_train': 0.2307688218957216, 
+        'batch_size': 27
+    }
+    print('Running with default space', space)
+else:
+    best_experiment = experiment_results.loc[experiment_results['val_precision_positives_last_epoch'].idxmax()]
+    space = best_experiment['space']
+    print('Running with space', space)
+    print('From best experiment')
+    print(best_experiment)
+
 # Modelling
 RUNS = 50
 for run in range(RUNS):
@@ -103,12 +99,11 @@ for run in range(RUNS):
         augment_flip=False,
         augment_brightness=False,
     )
-    train_dataset = Dataset.from_generator(lambda: train_generator, (tf.float32, tf.int32))
-    test_dataset = Dataset.from_generator(lambda: test_generator, (tf.float32, tf.int32))
+    train_dataset = tf.data.Dataset.from_generator(lambda: train_generator, (tf.float32, tf.int32))
+    test_dataset = tf.data.Dataset.from_generator(lambda: test_generator, (tf.float32, tf.int32))
 
     num_batches = len(train_indices)
     num_batches_test = len(test_indices)
-#Validate
     if TEST_MODE:
         space['epochs'] = 1
         space['convolutional_layers'] = space['convolutional_layers'][:1]
@@ -153,14 +148,16 @@ for run in range(RUNS):
         predictions_to_store['prediction'] >= 0.5,
         'destroyed'
     ].mean()
-    predictions_to_store.to_pickle(
-        '{}/test_set_{}.p'.format(PREDICTIONS_PATH, identifier)
+    losses['roc_auc_val'] = roc_auc_score(
+        predictions_to_store['destroyed'], 
+        predictions_to_store['prediction'],
     )
-    high_recall = losses.get('recall_val', [0]) > 0.35
-    high_precision = losses.get('precision_val', [0]) > 0.08
     with open('{}/experiment_{}.json'.format(RESULTS_PATH, identifier), 'w') as f:
         json.dump(str(losses), f)
-        print('Experiemnt saved in experiment_{}.json'.format(identifier))
-    
-    if high_recall and high_precision:
+        print('Experiment saved in experiment_{}.json'.format(identifier))
+        
+    if losses['roc_auc_val'] > 0.8:
+        predictions_to_store.to_pickle(
+            '{}/test_set_{}.p'.format(PREDICTIONS_PATH, identifier)
+        )
         model.save('logs/models/model_{}.h5'.format(identifier))
