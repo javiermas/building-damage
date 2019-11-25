@@ -7,9 +7,7 @@ from damage.models.base import CNNModel
 
 class CNN(CNNModel):
 
-    metrics = ['accuracy', recall_positives, recall_negatives, precision_positives,
-               precision_negatives, negatives, positives, true_positives,
-               true_negatives, false_positives, false_negatives]
+    metrics = ['accuracy', recall_positives, recall_negatives, negatives, positives]
 
     def __init__(self, convolutional_layers, dense_units=64, learning_rate=0.1, layer_type='cnn', **kwargs):
         self.convolutional_layers = convolutional_layers
