@@ -9,9 +9,10 @@ import tensorflow as tf
 from tensorflow.data import Dataset
 from tensorflow.errors import ResourceExhaustedError
 from keras.preprocessing.image import ImageDataGenerator
-
+from sklearn.metrics import roc_auc_score
 from damage.data import DataStream, load_features_multiple_cities
 from damage.models import CNN, RandomSearch, CNNPreTrained
+from damage.constants import EXPERIMENTS_PATH, FEATURES_PATH, PREDICTIONS_PATH
 
 
 parser = argparse.ArgumentParser()
@@ -20,14 +21,11 @@ parser.add_argument('--gpu')
 args = vars(parser.parse_args())
 
 
-os.environ['CUDA_VISIBLE_DEVICES'] = args.get('gpu', None) or '5'
-RESULTS_PATH = 'logs/experiments'
-FEATURES_PATH = 'logs/features'
-PREDICTIONS_PATH = 'logs/predictions'
+os.environ['CUDA_VISIBLE_DEVICES'] = args.get('gpu')
 TEST_MODE = os.environ.get('SYRIA_TEST', False)
 SAMPLE_CITY = 1
 features_file_name = args.get('features')
-list_feature_filenames_by_city = features_file_name.split('.p,')
+cities = [c.split('.p')[0] for c in features_file_name.split(',')]
 
 #### Loading features
 features = load_features_multiple_cities(cities, TEST_MODE, SAMPLE_CITY)
@@ -135,7 +133,7 @@ for space in spaces:
         predictions_to_store['destroyed'], 
         predictions_to_store['prediction'],
     )
-    with open('{}/experiment_{}.json'.format(RESULTS_PATH, identifier), 'w') as f:
+    with open('{}/experiment_{}.json'.format(EXPERIMENTS_PATH, identifier), 'w') as f:
         json.dump(str(losses), f)
         print('Experiment saved in experiment_{}.json'.format(identifier))
         
