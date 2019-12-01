@@ -9,11 +9,13 @@ class CNN(CNNModel):
 
     metrics = ['accuracy', recall_positives, recall_negatives, negatives, positives]
 
-    def __init__(self, convolutional_layers, dense_units=64, learning_rate=0.1, layer_type='cnn', **kwargs):
+    def __init__(self, convolutional_layers, dense_units=64, learning_rate=0.1,
+                 layer_type='cnn', activation_output='relu', **kwargs):
         self.convolutional_layers = convolutional_layers
         self.dense_units = dense_units
         self.learning_rate = learning_rate
         self.layer_type = layer_type
+        self.activation_output = activation_output
         self.layer_funcs = {
             'cnn': self._create_convolutional_and_pooling_layer_cnn,
             'vgg': self._create_convolutional_and_pooling_layer_vgg,
@@ -30,9 +32,10 @@ class CNN(CNNModel):
             Flatten(),
             Dense(units=self.dense_units),
             BatchNormalization(),
-            Dense(units=1, activation='relu'),
+            Dense(units=1, activation=self.activation_output),
         ])
         model = Sequential(layers)
-        model.compile(optimizer='adam', loss='binary_crossentropy', learning_rate=self.learning_rate,
+        model.compile(optimizer='adam', loss='binary_crossentropy',
+                      learning_rate=self.learning_rate,
                       metrics=self.metrics)
         return model
