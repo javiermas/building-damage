@@ -6,13 +6,9 @@ import numpy as np
 import rasterio
 
 from damage.data.data_sources import DATA_SOURCES
-
-
-FEATURES_PATH = 'logs/features'
-RASTERS_PATH = 'data/city_rasters'
-ANNOTATIONS_PATH = 'data/annotations'
-POLYGONS_PATH = 'data/polygons'
-EXPERIMENTS_PATH = 'logs/experiments'
+from damage.constants import (
+    RASTERS_PATH, ANNOTATIONS_PATH, POLYGONS_PATH, EXPERIMENTS_PATH, FEATURES_PATH
+)
 
 
 def load_data_multiple_cities(cities, rasters_path=RASTERS_PATH, annotations_path=ANNOTATIONS_PATH,
@@ -93,11 +89,11 @@ def load_experiment_results(path=EXPERIMENTS_PATH):
     return experiment_results
 
 
-def load_features_multiple_cities(self, cities, test=False, sample=1):
+def load_features_multiple_cities(cities, test=False, sample=1):
     appended_features = []
     for city_feature_filename in cities:
         # Reading
-        features_city = pd.read_pickle('{}/{}'.format(FEATURES_PATH, city_feature_filename))\
+        features_city = pd.read_pickle('{}/{}.p'.format(FEATURES_PATH, city_feature_filename))\
             .dropna(subset=['destroyed', 'image'])
         features_city = features_city.loc[features_city['no_analysis'] == 0]
         if test:

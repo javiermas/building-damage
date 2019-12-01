@@ -6,28 +6,28 @@ from time import time
 import pandas as pd
 import numpy as np
 import tensorflow as tf
-from sklearn.metrics import roc_auc_score
+from sklearn.metrics import roc_auc_score, classification_report
 
 from damage.data import DataStream, load_experiment_results, load_features_multiple_cities
 from damage.models import CNN, RandomSearch, CNNPreTrained
+from damage.constants import EXPERIMENTS_PATH, FEATURES_PATH, PREDICTIONS_PATH
 
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--features', required=True)
-parser.add_argument('--gpu')
+parser.add_argument('--gpu', required=True)
 args = vars(parser.parse_args())
 
 
-os.environ['CUDA_VISIBLE_DEVICES'] = args.get('gpu', None) or '5'
-RESULTS_PATH = 'logs/experiments'
-FEATURES_PATH = 'logs/features'
-PREDICTIONS_PATH = 'logs/predictions'
+os.environ['CUDA_VISIBLE_DEVICES'] = args.get('gpu')
 TEST_MODE = os.environ.get('SYRIA_TEST', False)
 features_file_name = args.get('features')
-cities = features_file_name.split('.p,')
+cities = [c.split('.p')[0] for c in features_file_name.split(',')]
 
 # Loading features
+print('Loading features for {}'.format(cities))
 features = load_features_multiple_cities(cities, TEST_MODE)
+print('Features loaded, {} rows and {} columns'.format(*features.shape))
 
 # Best parameters
 Model = CNN
@@ -39,7 +39,7 @@ experiment_results = experiment_results.loc[
 experiment_results = experiment_results.loc[
     experiment_results['val_recall_positives_last_epoch'] > 0.5
 ]
-if experiment_results.empty() or True:
+if experiment_results.empty or True:
     space = {
         'dense_units': 256,
         'prop_1_to_0': 0.3,
@@ -54,8 +54,9 @@ if experiment_results.empty() or True:
         'layer_type': 'cnn',
         'epochs': 8, 
         'prop_1_train': 0.2307688218957216, 
-        'batch_size': 27
+        'batch_size': 100,
     }
+    best_experiment = {}
     print('Running with default space', space)
 else:
     best_experiment = experiment_results.loc[experiment_results['val_precision_positives_last_epoch'].idxmax()]
@@ -67,6 +68,7 @@ else:
 # Modelling
 RUNS = 50
 for run in range(RUNS):
+    print('Creating batches')
     class_proportion = {
         1: 0.3
     }
@@ -90,8 +92,8 @@ for run in range(RUNS):
     train_generator = data_stream.get_train_data_generator_from_index(
         data=[train_data_upsampled['image'], train_data_upsampled['destroyed']],
         index=train_indices,
-        augment_flip=best_experiment['augment_flip'],
-        augment_brightness=best_experiment['augment_brightness'],
+        augment_flip=best_experiment.get('augment_flip', False),
+        augment_brightness=best_experiment.get('augment_brightness', False),
     )
     test_generator = data_stream.get_train_data_generator_from_index(
         data=[test_data['image'], test_data['destroyed']],
@@ -140,24 +142,38 @@ for run in range(RUNS):
         test_generator,
         steps=num_batches_test
     )
+    report = classification_report(
+        predictions_to_store['destroyed'],
+        predictions_to_store['prediction'].round(),
+    )
+    print('Classification report with a 0.5 threshold')
+    print(report)
     losses['recall_val'] = (predictions_to_store.loc[
-        predictions_to_store['destroyed'] == 1,
-        'prediction'
+        predictions_to_store['destroyed'] == 1, 'prediction'
     ] > 0.5).mean()
     losses['precision_val'] = predictions_to_store.loc[
-        predictions_to_store['prediction'] >= 0.5,
-        'destroyed'
+        predictions_to_store['prediction'] >= 0.5, 'destroyed'
     ].mean()
     losses['roc_auc_val'] = roc_auc_score(
         predictions_to_store['destroyed'], 
         predictions_to_store['prediction'],
     )
-    with open('{}/experiment_{}.json'.format(RESULTS_PATH, identifier), 'w') as f:
+    with open('{}/experiment_{}.json'.format(EXPERIMENTS_PATH, identifier), 'w') as f:
         json.dump(str(losses), f)
         print('Experiment saved in experiment_{}.json'.format(identifier))
         
     if losses['roc_auc_val'] > 0.8:
+        print(
+            'Roc auc score of {}, test set and model will be stored'\
+            .format(losses['roc_auc_val'])
+        )
         predictions_to_store.to_pickle(
             '{}/test_set_{}.p'.format(PREDICTIONS_PATH, identifier)
         )
         model.save('logs/models/model_{}.h5'.format(identifier))
+    else:
+        print(
+            'Roc auc score of {}, test set and model will not be stored'\
+            .format(losses['roc_auc_val'])
+        )
+

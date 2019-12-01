@@ -6,16 +6,18 @@ sys.path.insert(1, './')
 
 from damage.data import load_data_multiple_cities, save_as_pickle_to_path
 from damage import features
+from damage.constants import FEATURES_PATH
 
 
-STORING_PATH = 'logs/features'
 parser = argparse.ArgumentParser(
-    description='Process data for a given city and store it under {}/[filename]'.format(STORING_PATH)
+    description='Process data for a given city and store it under {}/[filename]'\
+        .format(FEATURES_PATH)
 )
 parser.add_argument(
     '--filename',
      help='''Features and target will be stored under {}/[filename].
-             It needs to end with ".p" as it will be stored as a pickle file (example: aleppo.p)''',
+             It needs to end with ".p" as it will be stored as a pickle file
+             (example: aleppo.p)''',
 )
 parser.add_argument(
     '--city',
@@ -62,9 +64,9 @@ print(features.head())
 
 # Storing
 print('Features will now be stored')
-save_as_pickle_to_path(features, '{}/{}'.format(STORING_PATH, file_name))
-print('Features stored in {}/{}'.format(STORING_PATH, file_name))
+save_as_pickle_to_path(features, '{}/{}'.format(FEATURES_PATH, file_name))
+print('Features stored in {}/{}'.format(FEATURES_PATH, file_name))
 print('Target will now be stored')
 save_as_pickle_to_path(features[['destroyed', 'latitude', 'longitude', 'no_analysis']],
-                       '{}/target_{}'.format(STORING_PATH, file_name))
-print('Target stored in {}/target_{}'.format(STORING_PATH, file_name))
+                       '{}/target_{}'.format(FEATURES_PATH, file_name))
+print('Target stored in {}/target_{}'.format(FEATURES_PATH, file_name))
