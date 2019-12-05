@@ -26,7 +26,7 @@ class TestRasterPairMaker(unittest.TestCase):
             'raster_date': [date(2018, 1, 1)],
             'date': [date(2018, 1, 1)],
         })
-        raster_pair = self.raster_pair_maker._make_single_raster_pair(first_raster, posterior_raster)
+        raster_pair = self.raster_pair_maker._make_single_raster_pair_dataframe(first_raster, posterior_raster)
         expected_output = pd.DataFrame({
             'city': ['a'],
             'patch_id': [0],
