@@ -12,6 +12,7 @@ from sklearn.model_selection import KFold
 from damage.models import CNN, RandomSearch
 from damage.data import DataStream, load_experiment_results
 from damage import features
+from damage.constants import PREDICTIONS_PATH, FEATURES_PATH, MODELS_PATH
 
 
 parser = argparse.ArgumentParser()
@@ -21,8 +22,6 @@ parser.add_argument('--experiment')
 args = vars(parser.parse_args())
 
 os.environ['CUDA_VISIBLE_DEVICES'] = args.get('gpu', None) or '5'
-RESULTS_PATH = 'logs/predictions'
-FEATURES_PATH = 'logs/features'
 features_file_name = args.get('features')
 
 # Reading
@@ -35,7 +34,7 @@ features = pd.read_pickle('{}/{}'.format(FEATURES_PATH, features_file_name))\
 Model = CNN
 
 #  Choose Model
-model = load_model('logs/models/model_{}.h5'.format(args['experiment']))
+model = load_model('{}/model_{}.h5'.format(MODELS_PATH, args['experiment']))
 experiments = load_experiment_results()
 space = experiments.loc[
     experiments['name'] == 'experiment_{}.json'.format(args['experiment']),
@@ -52,6 +51,6 @@ predictions = model.predict_generator(test_dataset, steps=num_batches_test)
 predictions = pd.DataFrame({
     'prediction': predictions.reshape(-1),
 }, index=features.index)
-file_name = '{}/prediction_{}.p'.format(RESULTS_PATH, round(time()))
+file_name = '{}/prediction_{}.p'.format(PREDICTIONS_PATH, round(time()))
 predictions.to_pickle(file_name)
 print('Store predictions on file: {}'.format(file_name))
