@@ -12,14 +12,13 @@ from keras.preprocessing.image import ImageDataGenerator
 from sklearn.metrics import roc_auc_score
 from damage.data import DataStream, load_features_multiple_cities
 from damage.models import CNN, RandomSearch, CNNPreTrained
-from damage.constants import EXPERIMENTS_PATH, FEATURES_PATH, PREDICTIONS_PATH
+from damage.constants import EXPERIMENTS_PATH, FEATURES_PATH, PREDICTIONS_PATH, MODELS_PATH
 
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--features', required=True)
 parser.add_argument('--gpu')
 args = vars(parser.parse_args())
-
 
 os.environ['CUDA_VISIBLE_DEVICES'] = args.get('gpu')
 TEST_MODE = os.environ.get('SYRIA_TEST', False)
@@ -141,4 +140,4 @@ for space in spaces:
         predictions_to_store.to_pickle(
             '{}/test_set_{}.p'.format(PREDICTIONS_PATH, identifier)
         )
-        model.save('logs/models/model_{}.h5'.format(identifier))
+        model.save('{}/model_{}.h5'.format(MODELS_PATH, identifier))
