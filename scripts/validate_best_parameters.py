@@ -10,7 +10,7 @@ from sklearn.metrics import roc_auc_score, classification_report
 
 from damage.data import DataStream, load_experiment_results, load_features_multiple_cities
 from damage.models import CNN, RandomSearch, CNNPreTrained
-from damage.constants import EXPERIMENTS_PATH, FEATURES_PATH, PREDICTIONS_PATH
+from damage.constants import EXPERIMENTS_PATH, FEATURES_PATH, PREDICTIONS_PATH, MODELS_PATH
 
 
 parser = argparse.ArgumentParser()
@@ -170,7 +170,7 @@ for run in range(RUNS):
         predictions_to_store.to_pickle(
             '{}/test_set_{}.p'.format(PREDICTIONS_PATH, identifier)
         )
-        model.save('logs/models/model_{}.h5'.format(identifier))
+        model.save('{}/model_{}.h5'.format(MODELS_PATH, identifier))
     else:
         print(
             'Roc auc score of {}, test set and model will not be stored'\
