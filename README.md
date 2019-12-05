@@ -15,7 +15,7 @@ pip install -e .
 
 ## Usage
 
-The pipeline is structured in three steps represented by three scripts: `compute_features.py`, `validate.py`, `predict_all.py`.
+The pipeline is structured in three steps represented by three scripts: `compute_features.py`, `validate.py`, `generate_dense_prediction_single_city.py`.
 
 ### Computing features
 
@@ -43,7 +43,7 @@ This command will run N instances of `scripts/validate.py` in parallel using the
 
 To generate predictions for all data you need to run the following command:
 ```
-python scripts/predict_all.py --features=<example_name.p> --gpu=<gpu_number>
+python scripts/generate_prediction_single_city.py --features=<example_name.p> --gpu=<gpu_number>
 ```
 This script will train on all data and predict on all data to generate maps of destruction for any given city and date. If you want to split the data, train on one part and predict on another one, you need to run the following command:
 ```
