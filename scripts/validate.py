@@ -104,7 +104,7 @@ for space in spaces:
                                           **space)
     except Exception as e:
         losses = {'log': str(e)}
-
+    
     losses['model'] = str(Model)
     losses['space'] = space
     losses['features'] = features_file_name
@@ -114,8 +114,8 @@ for space in spaces:
     losses['augment_flip'] = augment_flip
     losses['augment_brightness'] = augment_brightness
     identifier = round(time())
-    test_indices = [i for batch in test_indices for i in batch]
-    predictions_to_store = test_data.iloc[test_indices].drop('image', axis=1).copy()
+    test_indices_flat = [i for batch in test_indices for i in batch]
+    predictions_to_store = test_data.iloc[test_indices_flat].drop('image', axis=1).copy()
     predictions_to_store['prediction'] = model.predict_generator(
         test_generator,
         steps=num_batches_test

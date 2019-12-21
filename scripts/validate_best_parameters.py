@@ -35,11 +35,9 @@ experiment_results = load_experiment_results()
 experiment_results = experiment_results.loc[
     (experiment_results['model'] == str(Model))
     & (experiment_results['features'] == 'aleppo.p')
-]
-experiment_results = experiment_results.loc[
-    experiment_results['val_recall_positives_last_epoch'] > 0.5
-]
-if experiment_results.empty or True:
+].dropna(subset=['roc_auc_val'])
+experiment_results.loc[experiment_results['roc_auc_val'].idxmax()]
+if experiment_results.empty:
     space = {
         'dense_units': 256,
         'prop_1_to_0': 0.3,
@@ -59,7 +57,7 @@ if experiment_results.empty or True:
     best_experiment = {}
     print('Running with default space', space)
 else:
-    best_experiment = experiment_results.loc[experiment_results['val_precision_positives_last_epoch'].idxmax()]
+    best_experiment = experiment_results.iloc[0]
     space = best_experiment['space']
     print('Running with space', space)
     print('From best experiment')
@@ -136,8 +134,8 @@ for run in range(RUNS):
     losses['num_batches_test'] = num_batches_test
     losses['batch_size_test'] = test_batch_size
     identifier = round(time())
-    test_indices = [i for batch in test_indices for i in batch]
-    predictions_to_store = test_data.iloc[test_indices].drop('image', axis=1).copy()
+    test_indices_flat = [i for batch in test_indices for i in batch]
+    predictions_to_store = test_data.iloc[test_indices_flat].drop('image', axis=1).copy()
     predictions_to_store['prediction'] = model.predict_generator(
         test_generator,
         steps=num_batches_test
@@ -146,7 +144,7 @@ for run in range(RUNS):
         predictions_to_store['destroyed'],
         predictions_to_store['prediction'].round(),
     )
-    print('Classification report with a 0.5 threshold')
+    print('Classification report with a 0.5 threshold (if multiple classes on prediction, thats because of the relu function at the end, it would be good to explore why its better than sigmoid)')
     print(report)
     losses['recall_val'] = (predictions_to_store.loc[
         predictions_to_store['destroyed'] == 1, 'prediction'
