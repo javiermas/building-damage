@@ -49,8 +49,8 @@ class RandomSearch:
             'epochs': random.choice(range(5, 15)),
             'layer_type': random.choice(['cnn']),
             'class_weight': random.choice(np.linspace(0.2, 1.7)),
-            'learning_rate': random.choice(np.geomspace(1e-3, 1)),
-            'activation_output': random.choice(['relu', 'sigmoid']) # ReLU has shown much better performance
+            'learning_rate': random.choice(np.linspace(0.6, 1)),
+            'activation_output': random.choice(['relu']) # ReLU has shown much better performance
         }
 
         return space
@@ -61,8 +61,8 @@ class RandomSearch:
         convolutional_layers = RandomSearch._sample_convolutional_layers(num_layers)
         space = {
             'dense_units': random.choice([32, 64, 128, 256, 512, 1024]),
-            'learning_rate': random.choice(np.geomspace(1e-3, 1)),
-            'batch_size': random.choice(range(25, 50)),
+            'learning_rate': random.choice(np.linspace(0.6, 1)),
+            'batch_size': random.choice(range(8, 25)),
             'epochs': random.choice(range(5, 15)),
             'class_weight': random.choice(np.linspace(0.2, 1.7)),
             'convolutional_layers': convolutional_layers,
