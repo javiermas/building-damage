@@ -13,8 +13,8 @@ class RasterPairMaker(Feature):
 
     def transform(self, data):
         raster_pairs = self._make_raster_pairs_all_cities(data['RasterSplitter'].reset_index())
-        data.pop('RasterSplitter') # Hack to avoid memory problems
-        # We drop nans on date because those are the images that come before
+        data.pop('RasterSplitter') # Hack to avoid memory problems
+        # We drop nans on date because those are the images that come before
         # any annotation, and cannot be used for training
         return raster_pairs.dropna(subset=['date']).set_index(['city', 'patch_id', 'date'])
 
@@ -36,6 +36,7 @@ class RasterPairMaker(Feature):
         on the third axis (3 to 6 channel images) for a single city.
         """
         dates = raster_data['date'].unique()
+        print('**** raster_pair_marker.py _make_raster_pairs_single_city dates={}'.format(dates))
         first_date = dates.min()
         first_raster = raster_data.loc[raster_data['date'] == first_date]
         combined_rasters = []

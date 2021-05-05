@@ -9,6 +9,11 @@ from damage.features.base import Feature
 
 class RasterSplitter(Feature):
 
+    """
+    Responsible for splitting full rasters
+    into images of patch_size x patch_size
+    """
+
     def __init__(self, patch_size, stride):
         super().__init__()
         self.patch_size = patch_size
@@ -22,10 +27,12 @@ class RasterSplitter(Feature):
         rasters = [(key, value) for key, value in data.items() if 'raster' in key]
         tiles = []
         for name, raster in rasters:
+            print('**** raster_splitter.py _split_raster_data name={}'.format(name))
             array = self._raster_to_array(raster)
             city, year, month, day = self.parse_raster_filename(name)
             polygons = self._get_polygons_from_data_dict_single_city(data, city)
             no_analysis_areas_polygon, populated_areas_polygon = polygons
+            num_tiles_raster = 0
             for w in tqdm(range(self.patch_size//2, (raster.width - self.patch_size//2), self.stride)):
                 for h in range(self.patch_size//2, (raster.height - self.patch_size//2), self.stride):
                     longitude, latitude = raster.xy(h, w)
@@ -48,13 +55,16 @@ class RasterSplitter(Feature):
                         'patch_id': '{}-{}'.format(w, h),
                     }
                     tiles.append(tile)
+                    num_tiles_raster += 1
+                    
+            print('**** {} valid tiles'.format(num_tiles_raster))
 
         tiles = pd.DataFrame(tiles)
         return tiles
 
     @staticmethod
     def _get_polygons_from_data_dict_single_city(data_dict, city):
-        # No analysis
+        # No analysis
         no_analysis_key = [key for key in data_dict if 'no_analysis' in key
                            and city in key.lower()][0]
         no_analysis_areas = data_dict[no_analysis_key]

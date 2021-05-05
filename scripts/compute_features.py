@@ -9,6 +9,8 @@ from damage import features
 from damage.constants import FEATURES_PATH
 
 
+# Create a parser to input data from the command line
+
 parser = argparse.ArgumentParser(
     description='Process data for a given city and store it under {}/[filename]'\
         .format(FEATURES_PATH)
@@ -30,11 +32,11 @@ assert file_name.endswith('.p'), 'ERROR: filename needs to end with ".p"'
 
 # Constants
 CITIES = [args['city']]
-PATCH_SIZE = 64
+PATCH_SIZE = 64 # size of the patch (image)
 TIME_TO_ANNOTATION_THRESHOLD = timedelta(weeks=1)
 STRIDE = PATCH_SIZE  # dont change
 
-# Reading
+# Reading
 print('Reading data for cities {}'.format(CITIES))
 data = load_data_multiple_cities(CITIES)
 
@@ -46,7 +48,7 @@ pipeline = features.Pipeline(
     ],
     features=[
         ('RasterSplitter', features.RasterSplitter(patch_size=PATCH_SIZE, stride=STRIDE)),
-        ('AnnotationMaker', features.AnnotationMaker(PATCH_SIZE, TIME_TO_ANNOTATION_THRESHOLD)),
+        ('AnnotationMaker', features.AnnotationMaker_fillzeros(PATCH_SIZE, TIME_TO_ANNOTATION_THRESHOLD)),
         ('RasterPairMaker', features.RasterPairMaker()),
     ],
 )
