@@ -16,13 +16,19 @@ from damage.constants import EXPERIMENTS_PATH, FEATURES_PATH, PREDICTIONS_PATH, 
 parser = argparse.ArgumentParser()
 parser.add_argument('--features', required=True)
 parser.add_argument('--gpu', required=True)
-args = vars(parser.parse_args())
+#Joan
+parser.add_argument('--preprocessing', default=None, required=False)
 
+args = vars(parser.parse_args())
 
 os.environ['CUDA_VISIBLE_DEVICES'] = args.get('gpu')
 TEST_MODE = os.environ.get('SYRIA_TEST', False)
 features_file_name = args.get('features')
 cities = [c.split('.p')[0] for c in features_file_name.split(',')]
+#Joan
+preprocessing = args.get('preprocessing')
+assert preprocessing in [None, 'standardize', 'scale']
+
 
 # Loading features
 print('Loading features for {}'.format(cities))
@@ -36,7 +42,7 @@ experiment_results = experiment_results.loc[
     (experiment_results['model'] == str(Model))
     & (experiment_results['features'] == 'aleppo.p')
 ].dropna(subset=['roc_auc_val'])
-experiment_results.loc[experiment_results['roc_auc_val'].idxmax()]
+best_experiment = experiment_results.loc[experiment_results['roc_auc_val'].idxmax()]
 if experiment_results.empty:
     space = {
         'dense_units': 256,
@@ -52,12 +58,12 @@ if experiment_results.empty:
         'layer_type': 'cnn',
         'epochs': 8, 
         'prop_1_train': 0.2307688218957216, 
-        'batch_size': 100,
+        'batch_size': 100 
     }
     best_experiment = {}
     print('Running with default space', space)
 else:
-    best_experiment = experiment_results.iloc[0]
+    best_experiment['space']['preprocessing'] = preprocessing
     space = best_experiment['space']
     print('Running with space', space)
     print('From best experiment')
@@ -87,18 +93,29 @@ for run in range(RUNS):
 
     train_indices = data_stream._get_index_generator(train_data_upsampled, space['batch_size'])
     test_indices = data_stream._get_index_generator(test_data, test_batch_size)
+#Joan: changed to force data augmentation and/or standardization   
+#    train_generator = data_stream.get_train_data_generator_from_index(
+#        data=[train_data_upsampled['image'], train_data_upsampled['destroyed']],
+#        index=train_indices,
+#        augment_flip=best_experiment.get('augment_flip', False),
+#        augment_brightness=best_experiment.get('augment_brightness', False),
+#    )
+# data augmentation and standardization are done in syria/damage/data/data_stream.py
     train_generator = data_stream.get_train_data_generator_from_index(
         data=[train_data_upsampled['image'], train_data_upsampled['destroyed']],
         index=train_indices,
-        augment_flip=best_experiment.get('augment_flip', False),
-        augment_brightness=best_experiment.get('augment_brightness', False),
+        augment_flip=False,
+        augment_brightness=False, 
+        preprocessing=preprocessing
     )
     test_generator = data_stream.get_train_data_generator_from_index(
         data=[test_data['image'], test_data['destroyed']],
         index=test_indices,
         augment_flip=False,
-        augment_brightness=False,
+        augment_brightness=False, 
+        preprocessing=preprocessing
     )
+    #end of change
     train_dataset = tf.data.Dataset.from_generator(lambda: train_generator, (tf.float32, tf.int32))
     test_dataset = tf.data.Dataset.from_generator(lambda: test_generator, (tf.float32, tf.int32))
 
