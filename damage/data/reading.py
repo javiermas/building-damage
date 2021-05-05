@@ -9,7 +9,9 @@ from damage.data.data_sources import DATA_SOURCES
 from damage.constants import (
     RASTERS_PATH, ANNOTATIONS_PATH, POLYGONS_PATH, EXPERIMENTS_PATH, FEATURES_PATH
 )
-
+# Rasters = images (satellite)
+# Annotations = labels UN
+# Polygons = shapes to distinguish no-analysis area
 
 def load_data_multiple_cities(cities, rasters_path=RASTERS_PATH, annotations_path=ANNOTATIONS_PATH,
                               polygons_path=POLYGONS_PATH):
