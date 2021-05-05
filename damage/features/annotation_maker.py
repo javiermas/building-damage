@@ -33,13 +33,17 @@ class AnnotationMaker(Feature):
             annotation_data,
             raster_data
         )
+        # In the following join, they will rarely match in the dates 
+        # (annotation and raster have to exactly match in dates),
+        # but we want that, in order to do the carry-forward annotations,
+        # that's why we use an outer merge.
         annotation_and_raster_data = pd.merge(
             annotation_data,
             raster_data,
             left_on=['city', 'patch_id', 'annotation_date'],
             right_on=['city', 'patch_id', 'raster_date'],
             how='outer',
-        )
+        ) 
         annotation_and_raster_data['date'] = annotation_and_raster_data\
             .apply(lambda x: x['raster_date'] if pd.isnull(x['annotation_date']) else x['annotation_date'], axis=1)
         annotation_and_raster_data = annotation_and_raster_data\
@@ -47,17 +51,17 @@ class AnnotationMaker(Feature):
             .reset_index(drop=True)
         annotation_and_raster_data['destroyed'] = annotation_and_raster_data['damage_num']\
             .replace([1, 2], 0)\
-            .replace(3, 1)
+            .replace(3, 1) # damage_num represents damage levels. 0 is no damage, 1 moderate damage, 2 severe and 3 destroyed
         annotation_and_raster_data['damage_0'] = annotation_and_raster_data['destroyed']\
             .apply(lambda x: np.nan if x != 0 else 1)
         annotation_and_raster_data['damage_3'] = annotation_and_raster_data['destroyed']\
             .apply(lambda x: np.nan if x != 1 else 1)
         annotation_and_raster_data['damage_3'] = annotation_and_raster_data\
             .groupby(['city', 'patch_id'])['damage_3']\
-            .ffill()
+            .ffill() # If it's destroyed at time t, it will be destroyed at time t+i, for any i >= 0
         annotation_and_raster_data['damage_0'] = annotation_and_raster_data\
             .groupby(['city', 'patch_id'])['damage_0']\
-            .bfill()
+            .bfill() # If it's not at time t, it will not be destroyed at time t-i, for any i >= 0
         annotation_and_raster_data['destroyed'] = annotation_and_raster_data\
             .apply(self._damage_to_destruction, axis=1)
         annotation_and_raster_data = annotation_and_raster_data\
@@ -117,9 +121,19 @@ class AnnotationMaker(Feature):
 
     @staticmethod
     def _group_annotations_by_patch_id(annotation_data):
+        """If there's more than one annotation
+        per patch, we take the most damaged label"""
         return annotation_data.groupby(['city', 'patch_id', 'date'])[['damage_num']].max()
 
     def _assign_patch_id_to_annotation(self, annotation_data, data):
+        """
+        We assign a patch_id to the annotations in order to
+        combine them with the dataframe of raster patches.
+        The patch_id is computed by (1) finding the pixel coordinates
+        of the annotation in the city raster and (2) rounding
+        those pixel coordinates to obtain the closest patch centroid, 
+        which represent the patch_id.
+        """
         annotation_data_with_patch_id = []
         for city in annotation_data['city'].unique():
             raster_key_single_city = [key for key in data.keys() if 'raster' in key and city in key][0]
