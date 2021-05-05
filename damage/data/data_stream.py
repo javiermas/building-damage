@@ -4,6 +4,8 @@ import numpy as np
 import pandas as pd
 from sklearn.model_selection import train_test_split, StratifiedKFold
 
+from sklearn import preprocessing
+
 
 class DataStream:
     def __init__(self, batch_size, test_batch_size, train_proportion, class_proportion=None):
@@ -25,6 +27,7 @@ class DataStream:
         train_index_generator = self._get_index_generator(train_data, self.batch_size)
         test_index_generator = self._get_index_generator(test_data, self.test_batch_size)
         return train_index_generator, test_index_generator
+
     
     @staticmethod
     def _get_index_generator(features, batch_size, Splitter=StratifiedKFold):
@@ -34,24 +37,54 @@ class DataStream:
         batches = list(map(lambda x: x[1], batches))
         return batches
 
+
     def get_train_data_generator_from_index(
         self,
         data,
         index,
         augment_flip,
-        augment_brightness):
+        augment_brightness,
+        preprocessing=None):
         while True:
             for _index in index:
                 features = data[0].iloc[_index].values
                 target = np.stack(data[1].iloc[_index])
                 if augment_flip:
                     features = [self._flip(image) for image in features]
-                elif augment_brightness:
+
+                if augment_brightness:
                     features = [self._augment_brightness(image) for image in features]
 
+                if (preprocessing=='standardize'):
+                    features = [DataStream._standardize(image) for image in features]
+
+                if (preprocessing=='scale'):
+                    features = [DataStream._scale(image) for image in features]
+
                 features = np.stack(features)
+                #print('get_train_data_generator_from_index features {} target {}'.format(features.shape,target.shape))
                 yield features, target
     
+    @staticmethod
+    def _scale(image):
+        return image/255.0
+
+
+    @staticmethod
+    def _standardize(image):
+        # https://scikit-learn.org/stable/modules/preprocessing.html#standardization-or-mean-removal-and-variance-scaling
+        
+        # image = pre and post stacked in one image 64x64x6
+        #print('_standardize image {}'.format(image.shape))
+        pre = image[:,:,:3]
+        post = image[:,:,3:]
+        pre_standardized = np.reshape(preprocessing.scale(np.ravel(pre)), pre.shape)
+        post_standardized = np.reshape(preprocessing.scale(np.ravel(post)), post.shape)
+        image_standardized = np.concatenate([pre_standardized, post_standardized], axis=2)
+        #print('_standardize image_standardized {}'.format(image_standardized.shape))
+        return image_standardized
+
+
     @staticmethod
     def _flip(image):
         flipping_funcs = [
@@ -69,12 +102,27 @@ class DataStream:
         image_augmented = image * alpha
         return image_augmented
     
+
     @staticmethod
-    def get_test_data_generator_from_index(data, index):
+    def get_test_data_generator_from_index(data, index, preprocessing=None):
         while True:
             for _index in index:
-                batch = np.stack(data.iloc[_index]) 
-                yield batch
+                if (preprocessing is not None):
+                    features = data.iloc[_index]
+    
+                    if (preprocessing=='standardize'):
+                        features = [DataStream._standardize(image) for image in features]
+    
+                    if (preprocessing=='scale'):
+                        features = [DataStream._scale(image) for image in features]
+    
+                    features = np.stack(features)
+                    #print('get_test_data_generator_from_index features {} target {}'.format(features.shape,target.shape))
+                    yield features
+                else:
+                    batch = np.stack(data.iloc[_index])
+                    yield batch
+
     
     @staticmethod
     def _upsample_class_proportion(data, proportion):
