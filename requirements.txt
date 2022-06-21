@@ -1,5 +1,5 @@
 tensorflow==2.0.0a0
-numpy==1.16.2
+numpy==1.22.0
 geopandas==0.4.1
 rasterio==1.0.22
 pandas==0.24.1
