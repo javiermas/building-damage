@@ -1,4 +1,4 @@
-tensorflow==2.0.0a0
+tensorflow==2.9.3
 numpy==1.16.2
 geopandas==0.4.1
 rasterio==1.0.22
